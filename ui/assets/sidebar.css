@@ -1,0 +1,291 @@
+/**
+ * Test Analytics Portal Sidebar Styles
+ *
+ * This stylesheet contains all styling for the sidebar navigation component
+ * including header, navigation links, and footer sections.
+ */
+
+body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    background-color: #f8fafc;
+}
+
+/* Professional Sidebar */
+.sidebar-professional {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 80px;
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+    border-right: 1px solid #334155;
+    overflow: hidden;
+}
+
+.sidebar-professional:hover {
+    width: 280px;
+}
+
+/* Header Section */
+.sidebar-header {
+    padding: 1.5rem 1rem;
+    border-bottom: 1px solid #334155;
+    background: rgba(16, 185, 129, 0.1);
+    height: 80px; /* Fixed height to prevent movement */
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+.brand-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    position: relative;
+}
+
+.brand-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    flex-shrink: 0;
+    position: absolute; /* Fixed position to prevent movement */
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Brand icon styling */
+.brand-icon-wrapper .fas {
+    font-size: 1.8rem;
+    color: white;
+}
+
+.brand-text {
+    opacity: 0;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-left: 52px; /* Reduced from 64px to 52px to decrease space */
+    height: 48px; /* Fixed height */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: calc(100% - 52px); /* Updated to match new margin */
+    text-align: center; /* Center align the text */
+}
+
+.sidebar-professional:hover .brand-text {
+    opacity: 1;
+}
+
+.brand-title {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem 0;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+    text-align: center; /* Center align the title */
+}
+
+.brand-subtitle {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    margin: 0;
+    line-height: 1;
+    white-space: nowrap; /* Prevent text wrapping */
+    text-align: center; /* Center align the subtitle */
+}
+
+/* Navigation Section */
+.nav-section {
+    flex: 1;
+    padding: 1.5rem 0;
+}
+
+.nav-section-title {
+    color: #64748b;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0 1rem 1rem 1rem;
+    opacity: 0;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-professional:hover .nav-section-title {
+    opacity: 1;
+}
+
+.nav-modern {
+    gap: 0.25rem;
+}
+
+.nav-link-modern {
+    display: flex !important;
+    align-items: center;
+    padding: 0.75rem 1rem !important;
+    margin: 0 0.75rem;
+    border-radius: 12px !important;
+    color: #cbd5e1 !important;
+    text-decoration: none !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: visible; /* Changed from hidden to visible */
+    height: 48px;
+    box-sizing: border-box;
+}
+
+.nav-link-modern:hover {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #10b981 !important;
+    transform: translateX(4px);
+}
+
+.nav-link-modern.active {
+    background: linear-gradient(90deg, #10b981, #059669) !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.nav-link-modern.active:hover {
+    background: linear-gradient(90deg, #059669, #047857) !important;
+    transform: translateX(4px);
+}
+
+.nav-icon-wrapper {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.2rem;
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.nav-text {
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+    margin-left: 48px; /* Fixed margin to accommodate icon */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: inherit; /* Inherit color from parent */
+}
+
+.sidebar-professional:hover .nav-text {
+    opacity: 1;
+    width: auto;
+}
+
+/* Footer Section */
+.sidebar-footer {
+    padding: 1rem;
+    border-top: 1px solid #334155;
+    background: rgba(0, 0, 0, 0.2);
+    height: 80px; /* Fixed height to prevent movement */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    height: 60px; /* Fixed height */
+    justify-content: center;
+}
+
+/* User icon styling */
+.user-icon {
+    font-size: 1.5rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+.sidebar-professional:hover .user-info {
+    opacity: 1;
+}
+
+.user-name {
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    line-height: 1.2;
+}
+
+.user-role {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    margin: 0;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+/* Page Content */
+.page-content {
+    margin-left: 80px;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-height: 100vh;
+    padding: 2rem;
+    background-color: #f8fafc;
+}
+
+.sidebar-professional:hover ~ .page-content {
+    margin-left: 280px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sidebar-professional {
+        transform: translateX(-100%);
+    }
+
+    .sidebar-professional.mobile-open {
+        transform: translateX(0);
+    }
+
+    .page-content {
+        margin-left: 0;
+    }
+}
+
+/* Scrollbar Styling */
+.sidebar-professional::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-professional::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-professional::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 2px;
+}
+
+.sidebar-professional::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}

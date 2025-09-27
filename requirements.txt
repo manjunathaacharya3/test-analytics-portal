@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+python-multipart
+dash
+dash-bootstrap-components
+pandas
+plotly
+asyncpg==0.29.0
+psycopg2-binary==2.9.7
+httpx
+alembic==1.12.1
+elasticsearch==8.11.0
+python-jose==3.3.0
+passlib==1.7.4
+python-dotenv==1.0.0
+aiosqlite

@@ -1,0 +1,280 @@
+/**
+ * Test Analytics Portal - Module Details Page Styles
+ * This stylesheet contains all styling for the module details page
+ * including summary cards, tables, and scenarios.
+ */
+
+/* Container and Layout */
+.module-details-container {
+    background-color: #f8fafc;
+}
+
+.module-content {
+    padding: 20px;
+}
+
+/* Header Styles */
+.module-header-title {
+    color: #1b4332;
+    margin-bottom: 30px;
+    font-weight: bold;
+}
+
+.module-project-subtitle {
+    color: #6c757d;
+    margin-bottom: 30px;
+    font-size: 1.1rem;
+    font-style: italic;
+}
+
+.header-with-button {
+    margin-bottom: 30px;
+    overflow: hidden;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.back-button {
+    float: right;
+    margin-top: 5px;
+    background-color: #1e293b;
+    border-color: #1e293b;
+}
+
+.back-button:hover {
+    background-color: #0f172a;
+    border-color: #0f172a;
+}
+
+/* Summary Cards - Matching execution summary style exactly */
+.summary-row {
+    margin-bottom: 25px;
+}
+
+.summary-card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: none;
+    transition: transform 0.2s;
+}
+
+.summary-card:hover {
+    transform: translateY(-5px);
+}
+
+.summary-card-number {
+    color: #1b4332;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 2rem;
+}
+
+.summary-card-number-blue {
+    color: #0d6efd;
+}
+
+.summary-card-number-green {
+    color: #10b981;
+}
+
+.summary-card-label {
+    color: #6c757d;
+    margin-bottom: 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Filter Section */
+.filter-row {
+    margin-bottom: 25px;
+    background-color: #f1f5f9;
+    padding: 20px;
+    border-radius: 8px;
+    align-items: flex-end;
+}
+
+.filter-label {
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #1e293b;
+    display: block;
+    font-size: 0.9rem;
+}
+
+.filter-dropdown {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+/* Section Titles */
+.section-title {
+    color: #1b4332;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.section-divider {
+    margin-bottom: 20px;
+    border-color: #e2e8f0;
+}
+
+/* Table Styles */
+.table-container {
+    margin-bottom: 30px;
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Empty State */
+.empty-state-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    background-color: #f1f5f9;
+    border-radius: 8px;
+    margin-top: 30px;
+}
+
+.empty-state-message {
+    text-align: center;
+    color: #6c757d;
+    font-size: 1.1rem;
+    margin-top: 50px;
+}
+
+.info-message {
+    text-align: center;
+    color: #6c757d;
+    font-size: 1rem;
+    margin-top: 20px;
+}
+
+/* Scenarios Section */
+.scenarios-section {
+    margin-top: 30px;
+}
+
+.scenarios-title {
+    color: #1b4332;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.scenario-card {
+    margin-bottom: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: none;
+}
+
+.scenario-title {
+    color: #1b4332;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.scenario-meta {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+}
+
+.scenario-status {
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+
+.failed-step {
+    color: #dc3545;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+    border-left: 4px solid #dc3545;
+}
+
+.attachment-label {
+    font-weight: 600;
+    color: #1b4332;
+    margin-bottom: 5px;
+    margin-top: 10px;
+}
+
+.attachment-link {
+    display: block;
+    color: #0d6efd;
+    text-decoration: none;
+    margin-bottom: 3px;
+    font-size: 0.9rem;
+}
+
+.attachment-link:hover {
+    text-decoration: underline;
+    color: #0a58ca;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .filter-row {
+        padding: 15px;
+    }
+
+    .filter-row .col-6 {
+        margin-bottom: 15px;
+    }
+
+    .summary-card-number {
+        font-size: 1.5rem;
+    }
+
+    .module-header-title {
+        font-size: 1.5rem;
+    }
+
+    .summary-row .col-4 {
+        margin-bottom: 15px;
+    }
+}
+
+/* Ensure consistent spacing */
+.filter-row .row {
+    margin: 0;
+}
+
+.filter-row [class*="col-"] {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.page-title {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    font-size: 22px;
+    font-weight: 600;
+    color: #1f2937; /* dark grey */
+}
+
+.card-value {
+    font-size: 20px;
+    font-weight: bold;
+    color: #111827;
+}
+
+.scenario-card {
+    border-left: 4px solid #e5e7eb; /* neutral grey */
+}
+
+.scenario-status.passed { color: #16a34a; font-weight: 600; }
+.scenario-status.failed { color: #dc2626; font-weight: 600; }
+.scenario-status.skipped { color: #ca8a04; font-weight: 600; }

@@ -1,0 +1,175 @@
+/**
+ * Test Analytics Portal - Trends Page Styles
+ * This stylesheet contains all styling for the trends page
+ * including filters, charts, and layout.
+ */
+
+/* Container and Layout */
+.trends-content {
+    padding: 20px;
+    background-color: #f8fafc;
+}
+
+/* Header Styles */
+.trends-header-title {
+    color: #1b4332;
+    margin-bottom: 30px;
+    font-weight: bold;
+}
+
+.header-with-button {
+    margin-bottom: 30px;
+    overflow: hidden;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.back-button {
+    float: right;
+    margin-top: 5px;
+    background-color: #1e293b;
+    border-color: #1e293b;
+}
+
+.back-button:hover {
+    background-color: #0f172a;
+    border-color: #0f172a;
+}
+
+/* Filter Section */
+.filter-row {
+    margin-bottom: 30px;
+    background-color: #f1f5f9;
+    padding: 20px;
+    border-radius: 8px;
+    align-items: flex-end;
+}
+
+.filter-label {
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #1e293b;
+    display: block;
+    font-size: 0.9rem;
+}
+
+.filter-dropdown {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+/* View Mode Toggle */
+.mb-3 {
+    background-color: #f1f5f9;
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px !important;
+}
+
+/* Button styling */
+.btn-group .btn {
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: 8px 16px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-success {
+    background-color: #10b981;
+    border-color: #10b981;
+}
+
+.btn-success:hover {
+    background-color: #059669;
+    border-color: #059669;
+}
+
+.btn-secondary {
+    background-color: #6b7280;
+    border-color: #6b7280;
+}
+
+.btn-secondary:hover {
+    background-color: #374151;
+    border-color: #374151;
+}
+
+/* Charts Section */
+.charts-row {
+    margin-top: 20px;
+}
+
+.chart-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+    border: 1px solid #e5e7eb;
+}
+
+/* Chart styling adjustments */
+.chart-container .js-plotly-plot {
+    width: 100% !important;
+}
+
+.chart-container .plotly-graph-div {
+    width: 100% !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .filter-row {
+        padding: 15px;
+    }
+
+    .filter-row .col-3 {
+        margin-bottom: 15px;
+        width: 50%;
+    }
+
+    .trends-header-title {
+        font-size: 1.5rem;
+    }
+
+    .charts-row .col-6 {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .mb-3 {
+        padding: 10px 15px;
+    }
+}
+
+@media (max-width: 576px) {
+    .trends-content {
+        padding: 15px;
+    }
+
+    .filter-row .col-3 {
+        width: 100%;
+        margin-bottom: 15px;
+    }
+
+    .chart-container {
+        padding: 15px;
+    }
+}
+
+/* Ensure consistent spacing */
+.filter-row .row {
+    margin: 0;
+}
+
+.filter-row [class*="col-"] {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+/* View mode toggle styling */
+.view-mode-container .filter-label {
+    margin-bottom: 8px;
+}

@@ -1,0 +1,302 @@
+/**
+ * Test Analytics Portal - Execution Summary Styles
+ * This stylesheet contains all styling for the execution summary page
+ * including filters, tables, and status indicators.
+ */
+
+/* Container and Layout */
+.execution-summary-container {
+    background-color: #f8fafc;
+}
+
+.execution-content {
+    padding: 20px;
+}
+
+/* Header Styles */
+.exec-header-title {
+    color: #1b4332;
+    margin-bottom: 30px;
+    font-weight: bold;
+}
+
+.exec-header-subtitle {
+    color: #6c757d;
+    margin-bottom: 30px;
+    font-size: 1.1rem;
+}
+
+.header-with-button {
+    margin-bottom: 30px;
+    overflow: hidden;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.back-button {
+    float: right;
+    margin-top: 5px;
+    background-color: #1e293b;
+    border-color: #1e293b;
+}
+
+.back-button:hover {
+    background-color: #0f172a;
+    border-color: #0f172a;
+}
+
+/* Summary Cards */
+.summary-row {
+    margin-bottom: 25px;
+}
+
+.summary-card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: none;
+    transition: transform 0.2s;
+}
+
+.summary-card:hover {
+    transform: translateY(-5px);
+}
+
+.summary-card-number {
+    color: #1b4332;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 2rem;
+}
+
+.summary-card-number-blue {
+    color: #0d6efd;
+}
+
+.summary-card-number-green {
+    color: #10b981;
+}
+
+.summary-card-label {
+    color: #6c757d;
+    margin-bottom: 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Filter Section - Improved Alignment */
+.filter-row {
+    margin-bottom: 25px;
+    background-color: #f1f5f9;
+    padding: 20px;
+    border-radius: 8px;
+    align-items: flex-end;
+}
+
+.filter-label {
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #1e293b;
+    display: block;
+    font-size: 0.9rem;
+}
+
+.filter-dropdown {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+/* Override Dash dropdown styles for better alignment */
+.filter-dropdown .Select-control {
+    min-height: 38px;
+}
+
+.filter-dropdown .dash-dropdown {
+    margin-bottom: 0;
+}
+
+.date-picker {
+    width: 100%;
+}
+
+/* Removed button container styles since we're removing the buttons */
+
+/* Table Styles */
+.table-container {
+    margin-bottom: 30px;
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.data-table {
+    width: 100%;
+}
+
+/* Empty State */
+.empty-state-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    background-color: #f1f5f9;
+    border-radius: 8px;
+    margin-top: 30px;
+}
+
+.empty-state-message {
+    text-align: center;
+    color: #6c757d;
+    font-size: 1.1rem;
+    margin-top: 50px;
+}
+
+/* Footer */
+.footer-container {
+    margin-top: 30px;
+}
+
+.footer-text {
+    text-align: center;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Section Divider */
+.section-divider {
+    margin-bottom: 20px;
+    border-color: #e2e8f0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .filter-row {
+        padding: 15px;
+    }
+
+    .filter-row .col-4 {
+        margin-bottom: 15px;
+    }
+
+    .summary-card-number {
+        font-size: 1.5rem;
+    }
+
+    .exec-header-title {
+        font-size: 1.5rem;
+    }
+}
+
+/* Additional styles for better visual hierarchy */
+.execution-content h3 {
+    margin-top: 0;
+}
+
+/* Ensure consistent spacing */
+.filter-row .row {
+    margin: 0;
+}
+
+.filter-row [class*="col-"] {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+/* Professional Table Container */
+.table-container {
+    margin-bottom: 30px;
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+/* DataTable Hover Effect */
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td {
+    transition: all 0.2s ease;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner tr:hover td {
+    background-color: #e2e8f0 !important;
+}
+
+/* Pagination Controls */
+.dash-table-container .dash-pagination-controls {
+    padding: 15px 0 5px 0;
+}
+
+.dash-table-container .dash-pagination-controls .previous-page,
+.dash-table-container .dash-pagination-controls .next-page,
+.dash-table-container .dash-pagination-controls .first-page,
+.dash-table-container .dash-pagination-controls .last-page {
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 5px 10px;
+    margin: 0 2px;
+    color: #1e293b;
+    background-color: white;
+    transition: all 0.2s ease;
+}
+
+.dash-table-container .dash-pagination-controls .previous-page:hover,
+.dash-table-container .dash-pagination-controls .next-page:hover,
+.dash-table-container .dash-pagination-controls .first-page:hover,
+.dash-table-container .dash-pagination-controls .last-page:hover {
+    background-color: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+/* Current page indicator */
+.dash-table-container .dash-pagination-controls .current-page-container input {
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 5px 10px;
+    width: 60px;
+    text-align: center;
+}
+
+/* Back to Projects button */
+.back-button {
+    background-color: #374151; /* Dark grey */
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 14px;
+    font-weight: 500;
+    color: white !important;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.back-button:hover {
+    background-color: #111827;
+    transform: translateY(-1px);
+}
+
+/* View Module button (smaller & secondary look) */
+.view-module-btn {
+    background-color: #4b5563; /* Slightly lighter grey */
+    border: none;
+    border-radius: 5px;
+    padding: 4px 10px; /* Smaller size */
+    font-size: 13px;   /* Slightly smaller text */
+    font-weight: 500;
+    color: white !important;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.view-module-btn:hover {
+    background-color: #1f2937; /* Dark grey hover */
+    transform: translateY(-1px);
+}
+
