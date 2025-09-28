@@ -1,18 +1,43 @@
+import time
 from datetime import datetime
+
 import dash
 import dash_bootstrap_components as dbc
 import requests
-from dash import html, dcc, callback, Output, Input
+from dash import html, dcc, callback, Output, Input, State
 
 dash.register_page(__name__, path="/projects", name="Projects")
 
 API_URL = "http://localhost:8000"
 
 
+def timed_cache(seconds=3600):
+    """Time-based cache decorator."""
+
+    def wrapper(func):
+        cache = {}
+
+        def inner(*args):
+            now = time.time()
+            if args in cache:
+                value, timestamp = cache[args]
+                if seconds is None or now - timestamp < seconds:
+                    return value
+            value = func(*args)
+            cache[args] = (value, now)
+            return value
+
+        return inner
+
+    return wrapper
+
+
+# 🔹 Apply caching here
+@timed_cache(seconds=3600)  # 30 min cache (tune as needed)
 def fetch_projects():
     """Fetch project list from FastAPI backend"""
     try:
-        resp = requests.get(f"{API_URL}/projects/all_projects")
+        resp = requests.get(f"{API_URL}/projects/all_projects", timeout=5)
         resp.raise_for_status()
         return resp.json()
     except Exception as e:
@@ -28,18 +53,26 @@ def status_color(status):
     }.get(status, "#adb5bd")
 
 
-# Layout with container for dynamic content
+# 🔹 Layout
 layout = html.Div([
-    dcc.Interval(id="projects-refresh", interval=5 * 1000, n_intervals=0),  # auto-refresh every 5s
+    # Interval triggers background fetch
+    dcc.Interval(id="projects-refresh", interval=15 * 1000, n_intervals=0),
+
+    # Cached API data
+    dcc.Store(id="projects-store"),
+
+    # Page content
     html.Div(id="projects-content")
 ])
 
 
+# 🔹 Background data fetch
 @callback(
-    Output("projects-content", "children"),
-    Input("projects-refresh", "n_intervals")
+    Output("projects-store", "data"),
+    Input("projects-refresh", "n_intervals"),
+    prevent_initial_call=False
 )
-def render_projects(_):
+def update_projects_store(_):
     projects_data = fetch_projects()
 
     projects = []
@@ -57,14 +90,29 @@ def render_projects(_):
             "owner": proj.get("owner", "Unknown"),
         })
 
+    return projects
+
+
+# 🔹 UI rendering from cached store
+@callback(
+    Output("projects-content", "children"),
+    Input("projects-store", "data"),
+    State("projects-content", "children")
+)
+def render_projects(projects, old_content):
+    if not projects:
+        return html.Div("⚠️ No projects available", className="no-projects-text")
+
     total_projects = len(projects)
     total_tests = sum(p["total_tests"] for p in projects)
 
     return html.Div([
+
         # Header
         html.Div([
             html.H3("Projects Overview", className="projects-header-title"),
-            html.P("Monitor and manage your automation testing projects", className="projects-header-subtitle"),
+            html.P("Monitor and manage your automation testing projects",
+                   className="projects-header-subtitle"),
         ]),
 
         # Summary Cards
@@ -72,8 +120,22 @@ def render_projects(_):
             dbc.Col([
                 dbc.Card([
                     dbc.CardBody([
-                        html.H3(total_projects, className="summary-card-number"),
-                        html.P("Active Projects", className="summary-card-label")
+                        html.Div([
+                            html.Div([
+                                html.H3(total_projects, className="summary-card-number"),
+                                html.P("Active Projects", className="summary-card-label")
+                            ]),
+                            html.Div([
+                                html.I(className="fas fa-check-circle", style={
+                                    "fontSize": "24px",
+                                    "color": "#28a745"
+                                })
+                            ])
+                        ], style={
+                            "display": "flex",
+                            "justifyContent": "space-between",
+                            "alignItems": "center"
+                        })
                     ])
                 ], className="summary-card")
             ], width=6),
@@ -81,15 +143,30 @@ def render_projects(_):
             dbc.Col([
                 dbc.Card([
                     dbc.CardBody([
-                        html.H3(f"{total_tests:,}", className="summary-card-number summary-card-number-blue"),
-                        html.P("Total Test Cases", className="summary-card-label")
+                        html.Div([
+                            html.Div([
+                                html.H3(f"{total_tests:,}",
+                                        className="summary-card-number summary-card-number-blue"),
+                                html.P("Total Test Cases", className="summary-card-label")
+                            ]),
+                            html.Div([
+                                html.I(className="fas fa-vials", style={
+                                    "fontSize": "24px",
+                                    "color": "#17a2b8"
+                                })
+                            ])
+                        ], style={
+                            "display": "flex",
+                            "justifyContent": "space-between",
+                            "alignItems": "center"
+                        })
                     ])
                 ], className="summary-card")
             ], width=6),
         ], className="summary-row"),
 
         # Projects Grid
-        html.H4("Project Details", className="projects-section-title"),
+        html.H5("Project Details", className="projects-section-title"),
 
         dbc.Row([
             dbc.Col([
@@ -100,7 +177,8 @@ def render_projects(_):
                             html.Div([
                                 html.Div(className="status-indicator",
                                          style={"backgroundColor": status_color(proj["last_status"])}),
-                                html.Span(f" {proj['last_status'].title()}", className="status-text")
+                                html.Span(f" {proj['last_status'].title()}",
+                                          className="status-text")
                             ], className="status-container")
                         ], className="project-card-header")
                     ], className="project-card-header-bg"),
@@ -118,8 +196,10 @@ def render_projects(_):
                             ], width=6),
 
                             dbc.Col([
-                                html.Small("Total Tests", className="metric-label metric-label-right"),
-                                html.H5(f"{proj['total_tests']}", className="metric-value metric-value-right")
+                                html.Small("Total Tests",
+                                           className="metric-label metric-label-right"),
+                                html.H5(f"{proj['total_tests']}",
+                                        className="metric-value metric-value-right")
                             ], width=6),
                         ], className="mb-3"),
 

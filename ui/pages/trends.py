@@ -16,7 +16,7 @@ API_BASE = "http://localhost:8000"
 
 
 # ---------------- Simple Cache ---------------- #
-def timed_cache(seconds=30):
+def timed_cache(seconds=3600):
     """Time-based cache decorator."""
 
     def wrapper(func):
@@ -38,7 +38,7 @@ def timed_cache(seconds=30):
 
 
 # ---------------- Helper Functions ---------------- #
-@timed_cache(seconds=60)
+@timed_cache(seconds=3600)
 def fetch_projects():
     try:
         resp = httpx.get(f"{API_BASE}/projects/all_projects")
@@ -49,7 +49,7 @@ def fetch_projects():
         return []
 
 
-@timed_cache(seconds=120)  # Cache modules for 2 minutes
+@timed_cache(seconds=3600)  # Cache modules for 2 minutes
 def fetch_modules(project_id):
     if not project_id:
         return []
@@ -62,7 +62,7 @@ def fetch_modules(project_id):
         return []
 
 
-@timed_cache(seconds=60)  # Cache executions for 1 minute
+@timed_cache(seconds=3600)  # Cache executions for 1 minute
 def fetch_executions(project_id):
     """Fetch all executions for a project (do NOT collapse by module)."""
     if not project_id:

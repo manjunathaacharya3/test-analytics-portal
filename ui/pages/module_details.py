@@ -12,7 +12,7 @@ API_BASE = "http://localhost:8000"
 
 
 # ---------------- Simple Cache ---------------- #
-def timed_cache(seconds=30):
+def timed_cache(seconds=3600):
     """Time-based cache decorator."""
 
     def wrapper(func):
@@ -34,7 +34,7 @@ def timed_cache(seconds=30):
 
 
 # ---------------- Helper Functions ---------------- #
-@timed_cache(seconds=60)
+@timed_cache(seconds=3600)
 def fetch_projects():
     try:
         resp = httpx.get(f"{API_BASE}/projects/all_projects")
@@ -45,7 +45,7 @@ def fetch_projects():
         return {}
 
 
-@timed_cache(seconds=30)
+@timed_cache(seconds=3600)
 def fetch_modules_by_project(project_id):
     if not project_id:
         return []
@@ -58,7 +58,7 @@ def fetch_modules_by_project(project_id):
         return []
 
 
-@timed_cache(seconds=30)
+@timed_cache(seconds=3600)
 def fetch_module_executions(module_id):
     if not module_id:
         return []
@@ -90,7 +90,7 @@ def fetch_module_executions(module_id):
         return []
 
 
-@timed_cache(seconds=30)
+@timed_cache(seconds=3600)
 def fetch_run_scenarios(run_id):
     if not run_id:
         return []
@@ -139,6 +139,17 @@ def render_module_selector(project_key=None, module_key=None, show_back_button=F
     ], className="module-content")
 
 
+def normalize_status(status: str) -> str:
+    s = str(status).lower()
+    if s in ["green", "passed", "success"]:
+        return "✅"
+    elif s in ["yellow", "warning", "partial"]:
+        return "⚠️"
+    elif s in ["red", "failed", "error"]:
+        return "❌"
+    return "⬜"
+
+
 def render_module_details_content(module_id, project_id=None):
     executions = fetch_module_executions(module_id)
     df = pd.DataFrame(executions)
@@ -164,22 +175,69 @@ def render_module_details_content(module_id, project_id=None):
     available_dates = sorted(df['created_at'].apply(
         lambda x: x.split("T")[0]).unique()) if not df.empty and 'created_at' in df.columns else []
 
+    # 🔥 Normalize statuses to icons (✅, ⚠️, ❌)
+    if not df.empty and "status" in df.columns:
+        df["status"] = df["status"].apply(normalize_status)
+
     return html.Div([
         html.Hr(className="section-divider"),
-        html.P(f"Project: {project_name}", className="module-project-subtitle"),
         dbc.Row([
-            dbc.Col([dbc.Card(dbc.CardBody([html.H3(total_executions, className="summary-card-number"),
-                                            html.P("Total Executions", className="summary-card-label")]),
-                              className="summary-card")], width=4),
-            dbc.Col([dbc.Card(
-                dbc.CardBody([html.H3(f"{pass_rate}%", className="summary-card-number summary-card-number-blue"),
-                              html.P("Pass Rate", className="summary-card-label")]),
-                className="summary-card")], width=4),
-            dbc.Col([dbc.Card(
-                dbc.CardBody([html.H3(avg_duration, className="summary-card-number summary-card-number-green"),
-                              html.P("Avg Duration", className="summary-card-label")]),
-                className="summary-card")], width=4),
+            dbc.Col([dbc.Card(dbc.CardBody([
+                html.Div([
+                    html.Div([
+                        html.H3(total_executions, className="summary-card-number"),
+                        html.P("Total Executions", className="summary-card-label")
+                    ]),
+                    html.Div([
+                        html.I(className="fas fa-play-circle", style={
+                            "fontSize": "24px",
+                            "color": "#6f42c1"
+                        })
+                    ])
+                ], style={
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "center"
+                })
+            ]), className="summary-card")], width=4),
+            dbc.Col([dbc.Card(dbc.CardBody([
+                html.Div([
+                    html.Div([
+                        html.H3(f"{pass_rate}%", className="summary-card-number summary-card-number-blue"),
+                        html.P("Pass Rate", className="summary-card-label")
+                    ]),
+                    html.Div([
+                        html.I(className="fas fa-chart-pie", style={
+                            "fontSize": "24px",
+                            "color": "#28a745"
+                        })
+                    ])
+                ], style={
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "center"
+                })
+            ]), className="summary-card")], width=4),
+            dbc.Col([dbc.Card(dbc.CardBody([
+                html.Div([
+                    html.Div([
+                        html.H3(avg_duration, className="summary-card-number summary-card-number-green"),
+                        html.P("Avg Duration", className="summary-card-label")
+                    ]),
+                    html.Div([
+                        html.I(className="fas fa-stopwatch", style={
+                            "fontSize": "24px",
+                            "color": "#fd7e14"
+                        })
+                    ])
+                ], style={
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "center"
+                })
+            ]), className="summary-card")], width=4),
         ], className="summary-row"),
+
         dbc.Row([dbc.Col([html.Label("Execution Date:", className="filter-label"),
                           dcc.Dropdown(
                               id="module-details-date-dropdown",
@@ -189,11 +247,12 @@ def render_module_details_content(module_id, project_id=None):
                               placeholder="Select date",
                               className="filter-dropdown"
                           )], width=6)], className="filter-row"),
+
         html.H4("Execution Runs", className="section-title"),
         html.Div([dash_table.DataTable(
             id="module-details-runs-table",
             columns=[
-                {"name": "Run ID", "id": "run_id"},
+                # {"name": "Run ID", "id": "run_id"},
                 {"name": "Execution Date", "id": "created_at"},
                 {"name": "Passed", "id": "passed"},
                 {"name": "Failed", "id": "failed"},
@@ -203,24 +262,28 @@ def render_module_details_content(module_id, project_id=None):
             ],
             data=df.to_dict("records"),
             row_selectable="single",
-            style_cell={"textAlign": "center", "minWidth": "100px", "width": "120px", "maxWidth": "200px",
-                        "whiteSpace": "normal"},
-            style_header={"backgroundColor": "#1e293b", "color": "white", "fontWeight": "bold"},
+
+            # ✅ Match execution summary styles
+            style_cell={"textAlign": "center", "fontFamily": "inherit", "fontSize": "0.9rem"},
+            style_header={"backgroundColor": "#1e293b", "color": "white", "fontWeight": "bold",
+                          "fontFamily": "inherit"},
+            style_data={"whiteSpace": "normal", "height": "auto"},
             style_data_conditional=[
-                {"if": {"filter_query": "{status} contains 'Green'"}, "backgroundColor": "#d8f3dc"},
-                {"if": {"filter_query": "{status} contains 'Yellow'"}, "backgroundColor": "#fff3bf"},
-                {"if": {"filter_query": "{status} contains 'Red'"}, "backgroundColor": "#ffc9c9"},
+                {"if": {"column_id": "run_id"}, "fontWeight": "bold"},
+                {"if": {"filter_query": "{status} = '✅'"}, "backgroundColor": "#e6f7ec"},
+                {"if": {"filter_query": "{status} = '❌'"}, "backgroundColor": "#fdecea"},
+                {"if": {"filter_query": "{status} = '⚠️'"}, "backgroundColor": "#fffbea"},
             ],
+
             page_size=10,
-            style_table={"overflowX": "auto", "width": "100%", "maxHeight": "500px"},
-            fixed_rows={"headers": True},
-            virtualization=True,  # Enable virtualization
+            style_table={"overflowX": "auto", "width": "100%"},
             tooltip_data=[
-                {col: {"value": str(val), "type": "markdown"} for col, val in row.items()} for row in
-                df.to_dict("records")
+                {col: {"value": str(val), "type": "markdown"} for col, val in row.items()}
+                for row in df.to_dict("records")
             ],
             tooltip_duration=None,
         )], className="table-container"),
+
         html.Div(id="module-details-scenarios-section", className="scenarios-section")
     ])
 
@@ -293,6 +356,8 @@ def filter_dynamic_runs_by_date(selected_date, selected_module):
     executions = fetch_module_executions(selected_module)
     if selected_date and selected_date != "all":
         executions = [e for e in executions if e.get("created_at", "").startswith(selected_date)]
+    for e in executions:
+        e["status"] = normalize_status(e.get("status", ""))
     return executions
 
 
@@ -302,26 +367,122 @@ def filter_dynamic_runs_by_date(selected_date, selected_module):
     Input("module-details-runs-table", "data")
 )
 def show_scenarios_dynamic(selected_rows, table_data):
-    if not selected_rows:
+    if not selected_rows or not table_data:
         return html.Div([html.P("Select a Run ID to see scenarios.", className="info-message")])
-    run_id = table_data[selected_rows[0]]["run_id"]
+
+    try:
+        # Make sure index is valid
+        idx = selected_rows[0]
+        if idx >= len(table_data):
+            return html.Div([html.P("Invalid run selection.", className="info-message")])
+
+        run_id = table_data[idx].get("run_id")
+    except Exception:
+        return html.Div([html.P("Error retrieving run ID.", className="error-message")])
+
     sc_data = fetch_run_scenarios(run_id)
     if not sc_data:
         return html.Div([html.P("No scenarios available for this run.", className="info-message")])
-    scenario_cards = []
+
+    normalized_data = []
+    tooltip_rows = []
+
     for sc in sc_data:
-        card_body = [
-            html.H5(sc["scenario"], className="scenario-title"),
-            html.P(f"Tags: {sc['tags']} | Duration: {sc['duration']}", className="scenario-meta"),
-            html.P(f"Status: {sc['status']}", className="scenario-status"),
-        ]
-        if sc["status"].startswith("❌"):
-            card_body.append(html.P(f"Failed Step: {sc.get('failed_step', '')}", className="failed-step"))
-            card_body.append(html.Pre(sc.get("error", ""), className="error-message"))
+        # --- status icon ---
+        s = str(sc.get("status", "")).lower()
+        if s in ["passed", "success", "green"]:
+            status_icon = "✅"
+        else:
+            status_icon = "❌"
+
+        # --- tags (string) ---
+        tags = sc.get("tags")
+        if isinstance(tags, list):
+            tags_str = ", ".join([str(t) for t in tags])
+        else:
+            tags_str = str(tags) if tags is not None else "-"
+
+        # --- attachments => markdown link string ---
         attachments = sc.get("attachments") or []
-        if attachments:
-            card_body.append(html.P("Attachments:", className="attachment-label"))
-            for att in attachments:
-                card_body.append(html.A(att, href=f"/assets/{att}", target="_blank", className="attachment-link"))
-        scenario_cards.append(dbc.Card(dbc.CardBody(card_body), className="scenario-card"))
-    return html.Div([html.H4(f"Scenarios for Run {run_id}", className="scenarios-title"), html.Div(scenario_cards)])
+        if isinstance(attachments, list) and attachments:
+            attachments_md = " | ".join([f"[{att}](/assets/{att})" for att in attachments])
+        else:
+            attachments_md = "-"
+
+        # --- error cell (short label) and full error for tooltip ---
+        error_text = sc.get("error") or ""
+        error_cell = "View" if error_text else "-"
+
+        normalized_row = {
+            "scenario": str(sc.get("scenario", "")),
+            "tags": tags_str,
+            "duration": str(sc.get("duration", "")),
+            "status": status_icon,
+            "failed_step": str(sc.get("failed_step", "")),
+            "error": error_cell,
+            "attachments": attachments_md,
+        }
+
+        # Build tooltip row (all values stringified)
+        tooltip_row = {}
+        for col, val in normalized_row.items():
+            # For the error column we want the full raw error text in the tooltip (not the 'View' label)
+            if col == "error":
+                tooltip_val = str(error_text)
+            elif col == "attachments":
+                tooltip_val = str(attachments_md)
+            else:
+                tooltip_val = str(val)
+            tooltip_row[col] = {"value": tooltip_val, "type": "markdown"}
+
+        normalized_data.append(normalized_row)
+        tooltip_rows.append(tooltip_row)
+
+    return html.Div([
+        html.H5(f"Scenario wise execution details - ", className="scenarios-title"),
+        dash_table.DataTable(
+            id="module-details-scenarios-table",
+            columns=[
+                {"name": "Scenario", "id": "scenario"},
+                {"name": "Tags", "id": "tags"},
+                {"name": "Duration", "id": "duration"},
+                {"name": "Status", "id": "status"},
+                {"name": "Failed Step", "id": "failed_step"},
+                {"name": "Error", "id": "error"},
+                {"name": "Attachments", "id": "attachments", "presentation": "markdown"},
+            ],
+            data=normalized_data,
+            markdown_options={"html": True},
+            style_cell={
+                "textAlign": "center",
+                "fontFamily": "inherit",
+                "fontSize": "0.9rem",
+                "whiteSpace": "normal",
+                "height": "auto",
+            },
+            style_header={
+                "backgroundColor": "#1e293b",
+                "color": "white",
+                "fontWeight": "bold",
+            },
+            style_data={"whiteSpace": "normal", "height": "auto"},
+            style_data_conditional=[
+                {"if": {"column_id": "scenario"}},
+                {"if": {"filter_query": "{status} = '✅'"}, "backgroundColor": "#e6f7ec"},
+                {"if": {"filter_query": "{status} = '❌'"}, "backgroundColor": "#fdecea"}
+            ],
+            style_cell_conditional=[
+                {"if": {"column_id": "scenario"}, "width": "30%"},
+                {"if": {"column_id": "tags"}, "width": "10%"},
+                {"if": {"column_id": "duration"}, "width": "10%"},
+                {"if": {"column_id": "status"}, "width": "10%"},
+                {"if": {"column_id": "failed_step"}, "width": "30%"},
+                {"if": {"column_id": "error"}, "width": "10%"},
+                {"if": {"column_id": "attachments"}, "width": "10%"},
+            ],
+            tooltip_data=tooltip_rows,
+            tooltip_duration=None,
+            page_size=10,
+            style_table={"overflowX": "auto", "width": "100%"},
+        )
+    ])

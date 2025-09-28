@@ -92,7 +92,7 @@
 }
 
 .project-card-header-bg {
-    background: linear-gradient(135deg, #ede9fe 0%, #f3e8ff 100%);
+    background: linear-gradient(135deg, #f3e8ff 0%, #f3e8ff 100%);
     padding: 0.8rem 1.2rem; /* medium size */
     position: relative;
 }

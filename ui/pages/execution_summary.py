@@ -16,7 +16,7 @@ PROJECTS_API = f"{API_BASE_URL}/projects/all_projects"
 
 
 # ---------------- Simple Cache ----------------
-def timed_cache(seconds=30):
+def timed_cache(seconds=3600):
     """Time-based cache decorator."""
 
     def wrapper(func):
@@ -38,7 +38,8 @@ def timed_cache(seconds=30):
 
 
 # ---------------- Helper Functions ----------------
-@timed_cache(seconds=60)
+@timed_cache(seconds=3600
+             )
 def fetch_projects():
     """Fetch projects dynamically from API"""
     try:
@@ -51,9 +52,9 @@ def fetch_projects():
         return []
 
 
-@timed_cache(seconds=30)
+@timed_cache(seconds=3600)
 def fetch_project_execution_data(project_key):
-    """Fetch only the latest execution per module for a project"""
+    """Fetch all executions for a project (keep full history)."""
     try:
         url = f"{API_BASE_URL}/api/executions/{project_key}/executions"
         response = requests.get(url)
@@ -62,22 +63,20 @@ def fetch_project_execution_data(project_key):
 
         df = pd.DataFrame(data)
         if not df.empty:
-            # Assume there's a column like 'start_time' or 'created_at' to sort by
             sort_col = "start_time" if "start_time" in df.columns else "created_at"
-
-            # Convert to datetime if needed
             df[sort_col] = pd.to_datetime(df[sort_col], errors="coerce")
+            df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")  # ensure datetime
 
-            # Sort and keep the latest execution for each module
-            df = df.sort_values(by=sort_col, ascending=False).groupby("module_name", as_index=False).first()
-
-            # Precompute status & actions once
-            df["status"] = df.apply(lambda row: get_status_color(row["passed"], row["total"]), axis=1)
-            df["actions"] = df["module_name"].apply(
-                lambda m: f'<div style="text-align: center;">'
-                          f'<a href="/module-details?module={m.replace(" ", "%20")}&project_id={project_key}">'
-                          f'<button class="view-module-btn">View Module</button>'
-                          f'</a></div>'
+            # Add status icons + actions
+            df["status"] = df.apply(
+                lambda row: render_status_icon(get_status_color(row["passed"], row["total"])),
+                axis=1
+            )
+            df["actions"] = df.apply(
+                lambda row: f'<div style="text-align: center;">'
+                            f'<a href="/module-details?module={row["module_name"].replace(" ", "%20")}&project_id={project_key}">'
+                            f'<button class="view-module-btn">View Module</button>'
+                            f'</a></div>', axis=1
             )
         return df.to_dict("records")
 
@@ -88,27 +87,48 @@ def fetch_project_execution_data(project_key):
 
 def get_status_color(passed, total):
     if total == 0:
-        return "⚪️ Grey"
+        return "grey"
     ratio = (passed / total) * 100
     if ratio >= 90:
-        return "✅ Green"
+        return "green"
     elif ratio >= 60:
-        return "⚠️ Yellow"
+        return "yellow"
     else:
-        return "❌ Red"
+        return "red"
+
+
+def render_status_icon(status):
+    """Return only icons for status display."""
+    icons = {
+        "green": "✅",
+        "yellow": "⚠️",
+        "red": "❌",
+        "grey": "⬜"
+    }
+    return icons.get(status, "⬜")
 
 
 def filter_data_by_criteria(project_df, selected_date, selected_module, selected_status):
     filtered_df = project_df.copy()
+
+    if "created_at" in filtered_df.columns:
+        filtered_df["created_at"] = pd.to_datetime(filtered_df["created_at"], errors="coerce")
+
+    # ✅ Date filter using .dt
     if selected_date:
-        filtered_df = filtered_df[filtered_df['created_at'].str.startswith(selected_date)]
+        filtered_df = filtered_df[filtered_df["created_at"].dt.strftime("%Y-%m-%d") == selected_date]
+
+    # ✅ Module filter
     if selected_module and selected_module != "all":
         filtered_df = filtered_df[filtered_df['module_name'] == selected_module]
+
+    # ✅ Status filter
     if selected_status and selected_status != 'all':
-        status_map = {'green': '✅ Green', 'yellow': '⚠️ Yellow', 'red': '❌ Red'}
-        target_status = status_map.get(selected_status)
-        if target_status:
-            filtered_df = filtered_df[filtered_df['status'] == target_status]
+        icon_map = {"green": "✅", "yellow": "⚠️", "red": "❌"}
+        target_icon = icon_map.get(selected_status)
+        if target_icon:
+            filtered_df = filtered_df[filtered_df["status"].str.contains(target_icon)]
+
     return filtered_df
 
 
@@ -129,7 +149,7 @@ def calculate_summary_metrics(project_df):
 # ---------------- Layout ----------------
 layout = html.Div([
     dcc.Location(id="exec-url", refresh=False),
-    dcc.Store(id="project-data-store"),  # cache execution data client-side
+    dcc.Store(id="project-data-store"),
     html.Div(id="execution-summary-content", className="execution-summary-container")
 ])
 
@@ -138,7 +158,7 @@ layout = html.Div([
 def render_project_selector():
     projects = fetch_projects()
     return html.Div([
-        html.H2("Execution Summary", className="exec-header-title"),
+        html.H3("Execution Summary", className="exec-header-title"),
         dbc.Row([
             dbc.Col([
                 html.Label("Project:", className="filter-label"),
@@ -158,35 +178,85 @@ def render_execution_summary_content(project_name, project_key, project_df):
     metrics = calculate_summary_metrics(project_df)
     available_dates = (
         sorted(project_df["created_at"].dt.strftime("%Y-%m-%d").unique())
-        if not project_df.empty
-        else []
+        if not project_df.empty else []
     )
 
     return html.Div([
-        html.H3(f"Execution Summary: {project_name}", className="exec-header-title"),
+        html.H5(f"Execution Summary: {project_name}", className="exec-header-title"),
 
-        # Summary cards
+        # Summary cards with icons
         dbc.Row([
             dbc.Col(dbc.Card(dbc.CardBody([
-                html.H3(f"{metrics['pass_rate']}%", className="summary-card-number"),
-                html.P("Overall Pass Rate", className="summary-card-label")
-            ]), className="summary-card shadow-sm p-3"), width=4),
+                html.Div([
+                    html.Div([
+                        html.H4(f"{metrics['pass_rate']}%", className="summary-card-number",
+                                style={"fontSize": "1.5rem"}),
+                        html.P("Overall Pass Rate", className="summary-card-label",
+                               style={"fontSize": "0.9rem", "margin": 0})
+                    ]),
+                    html.Div([
+                        html.I(className="fas fa-chart-line", style={
+                            "fontSize": "24px",
+                            "color": "#28a745"
+                        })
+                    ])
+                ], style={
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "center"
+                })
+            ]), className="summary-card shadow-sm p-2", style={"height": "100%"}), width=4),
+
             dbc.Col(dbc.Card(dbc.CardBody([
-                html.H3(f"{metrics['total_tests']}", className="summary-card-number summary-card-number-blue"),
-                html.P("Total Test Cases", className="summary-card-label")
-            ]), className="summary-card shadow-sm p-3"), width=4),
+                html.Div([
+                    html.Div([
+                        html.H4(f"{metrics['total_tests']}", className="summary-card-number summary-card-number-blue",
+                                style={"fontSize": "1.5rem"}),
+                        html.P("Total Test Cases", className="summary-card-label",
+                               style={"fontSize": "0.9rem", "margin": 0})
+                    ]),
+                    html.Div([
+                        html.I(className="fas fa-flask", style={
+                            "fontSize": "24px",
+                            "color": "#17a2b8"
+                        })
+                    ])
+                ], style={
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "center"
+                })
+            ]), className="summary-card shadow-sm p-2", style={"height": "100%"}), width=4),
+
             dbc.Col(dbc.Card(dbc.CardBody([
-                html.H3(f"{metrics['total_minutes']}m", className="summary-card-number summary-card-number-green"),
-                html.P("Total Duration", className="summary-card-label")
-            ]), className="summary-card shadow-sm p-3"), width=4),
-        ], className="summary-row"),
+                html.Div([
+                    html.Div([
+                        html.H4(f"{metrics['total_minutes']}m",
+                                className="summary-card-number summary-card-number-green",
+                                style={"fontSize": "1.5rem"}),
+                        html.P("Total Duration", className="summary-card-label",
+                               style={"fontSize": "0.9rem", "margin": 0})
+                    ]),
+                    html.Div([
+                        html.I(className="fas fa-clock", style={
+                            "fontSize": "24px",
+                            "color": "#6f42c1"
+                        })
+                    ])
+                ], style={
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "center"
+                })
+            ]), className="summary-card shadow-sm p-2", style={"height": "100%"}), width=4),
+        ], className="summary-row", style={"marginBottom": "15px"}),
 
         # Filters
         dbc.Row([
             dbc.Col([dcc.Dropdown(
                 id="date-dropdown-dynamic",
                 options=[{"label": date, "value": date} for date in available_dates],
-                value=available_dates[-1],
+                value=available_dates[-1] if available_dates else None,
                 placeholder="Select date",
                 className="filter-dropdown"
             )], width=4),
@@ -212,11 +282,11 @@ def render_execution_summary_content(project_name, project_key, project_df):
         ], className="filter-row"),
 
         # Execution table
+        # ---------------- Execution Table Rendering ----------------
         html.Div([
             dash_table.DataTable(
                 id="exec-table-dynamic",
                 columns=[
-                    # {"name": "ID", "id": "id"},
                     {"name": "Module Name", "id": "module_name"},
                     {"name": "Passed", "id": "passed"},
                     {"name": "Failed", "id": "failed"},
@@ -226,17 +296,28 @@ def render_execution_summary_content(project_name, project_key, project_df):
                     {"name": "Actions", "id": "actions", "presentation": "markdown"},
                 ],
                 data=project_df.to_dict("records"),
-                markdown_options={"html": True},
-                style_cell={"textAlign": "center"},
-                style_header={"backgroundColor": "#1e293b", "color": "white", "fontWeight": "bold"},
+                markdown_options={"html": True},  # ✅ allow button HTML rendering
+                style_cell={"textAlign": "center", "fontFamily": "inherit", "fontSize": "0.9rem"},
+                style_header={"backgroundColor": "#1e293b", "color": "white", "fontWeight": "bold",
+                              "fontFamily": "inherit"},
+                style_data={"whiteSpace": "normal", "height": "auto"},
                 style_data_conditional=[
-                    {"if": {"filter_query": "{status} contains 'Green'"}, "backgroundColor": "#e6f4ea",
-                     "color": "#1f2937"},
-                    {"if": {"filter_query": "{status} contains 'Yellow'"}, "backgroundColor": "#fff9db",
-                     "color": "#1f2937"},
-                    {"if": {"filter_query": "{status} contains 'Red'"}, "backgroundColor": "#fdecea",
-                     "color": "#1f2937"},
-                    {"if": {"column_id": "module_name"}, "fontWeight": "bold"},
+                    {
+                        "if": {"column_id": "module_name"},
+                        "fontWeight": "bold"
+                    },
+                    {
+                        "if": {"filter_query": "{status} = '✅'"},
+                        "backgroundColor": "#e6f7ec"  # very light green
+                    },
+                    {
+                        "if": {"filter_query": "{status} = '❌'"},
+                        "backgroundColor": "#fdecea"  # very light red
+                    },
+                    {
+                        "if": {"filter_query": "{status} = '⚠️'"},
+                        "backgroundColor": "#fffbea"  # very light yellow
+                    }
                 ],
                 page_size=10,
                 style_table={"overflowX": "auto", "width": "100%"}
@@ -277,7 +358,7 @@ def render_summary(search):
 
 @callback(
     [Output("dynamic-execution-content", "children"),
-     Output("project-data-store", "data", allow_duplicate=True)],  # 👈 here
+     Output("project-data-store", "data", allow_duplicate=True)],
     Input("project-selector-dropdown", "value"),
     prevent_initial_call=True
 )
@@ -306,9 +387,29 @@ def update_table_data(selected_date, selected_module, selected_status, project_d
     if not project_data:
         return [], []
     project_df = pd.DataFrame(project_data)
+
+    # ✅ Ensure datetime for filtering
+    if "created_at" in project_df.columns:
+        project_df["created_at"] = pd.to_datetime(project_df["created_at"], errors="coerce")
+
+    # ✅ First filter by date
+    if selected_date:
+        project_df = project_df[project_df["created_at"].dt.strftime("%Y-%m-%d") == selected_date]
+
+    # ✅ Now get *latest execution per module* for that date
+    if not project_df.empty:
+        sort_col = "start_time" if "start_time" in project_df.columns else "created_at"
+        project_df = project_df.sort_values(by=sort_col, ascending=False).groupby("module_name", as_index=False).first()
+
+    # Apply status & module filters
     filtered_df = filter_data_by_criteria(project_df, selected_date, selected_module, selected_status)
+
+    if not filtered_df.empty:
+        filtered_df["status"] = filtered_df["status"].apply(
+            lambda s: render_status_icon(s.lower()) if s not in ["✅", "⚠️", "❌", "⬜"] else s
+        )
+
     columns = [
-        # {"name": "ID", "id": "id"},
         {"name": "Module Name", "id": "module_name"},
         {"name": "Passed", "id": "passed"},
         {"name": "Failed", "id": "failed"},
