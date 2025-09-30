@@ -7,7 +7,7 @@
     border: 1px solid #e2e8f0;
     background-color: white;
     transition: all 0.25s ease-in-out;
-    padding: 16px;
+    padding: 0px;
 }
 .summary-card:hover {
     transform: translateY(-4px);
@@ -19,7 +19,7 @@
    =============================== */
 .project-card {
     border-radius: 12px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid transparent;
     background: white;
     overflow: hidden;
     transition: all 0.25s ease-in-out;
@@ -28,7 +28,7 @@
 .project-card:hover {
     transform: translateY(-5px) scale(1.01);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
-    border-color: #6366f1; /* subtle purple highlight */
+    /* border-color removed to avoid purple on hover */
 }
 
 /* ===============================

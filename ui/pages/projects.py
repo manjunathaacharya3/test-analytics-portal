@@ -124,13 +124,7 @@ def render_projects(projects, old_content):
                     "color": "#94a3b8",
                     "fontSize": "14px"
                 })
-            ], style={
-                "textAlign": "center",
-                "padding": "80px 20px",
-                "backgroundColor": "white",
-                "borderRadius": "12px",
-                "border": "1px solid #e2e8f0"
-            })
+            ], className="empty-state")
         ], style={"maxWidth": "1400px", "margin": "0 auto", "padding": "40px 24px"})
 
     total_projects = len(projects)
@@ -209,12 +203,7 @@ def render_projects(projects, old_content):
                             "alignItems": "center"
                         })
                     ])
-                ], style={
-                    "borderRadius": "12px",
-                    "boxShadow": "0 2px 6px rgba(0,0,0,0.05)",
-                    "border": "1px solid #e2e8f0",
-                    "backgroundColor": "white"
-                })
+                ], className="summary-card")
             ], width=6),
 
             dbc.Col([
@@ -244,19 +233,17 @@ def render_projects(projects, old_content):
                             "alignItems": "center"
                         })
                     ])
-                ], style={
-                    "borderRadius": "12px",
-                    "boxShadow": "0 2px 6px rgba(0,0,0,0.05)",
-                    "border": "1px solid #e2e8f0",
-                    "backgroundColor": "white"
-                })
+                ], className="summary-card")
             ], width=6)
         ], style={"marginBottom": "32px"}),
 
+        # All projects header
+        html.Div([html.H5("All projects")], style={"margin": "20px 0"}),
+
         # Projects Grid
-        html.Div([
-            dbc.Row([
-                dbc.Col([
+        dbc.Row([
+            dbc.Col(
+                dbc.Card([
                     html.Div([
                         # Project Header
                         html.Div([
@@ -298,162 +285,118 @@ def render_projects(projects, old_content):
                                 "backgroundColor": status_bg_color(proj["last_status"]),
                                 "borderRadius": "12px"
                             })
-                        ], style={
-                            "display": "flex",
-                            "justifyContent": "space-between",
-                            "alignItems": "center",
-                            "padding": "16px 18px",
-                            "borderBottom": "2px solid #f1f5f9",
-                            "backgroundColor": "#f9fafb"
-                        }),
+                        ], className="project-card-header"),
 
                         # KPI Row
-                        html.Div([
-                            dbc.Row([
-                                dbc.Col([
-                                    html.Div([
-                                        html.I(className="fas fa-chart-pie", style={
-                                            "fontSize": "22px",
-                                            "color": pass_rate_color(proj['pass_rate'])
-                                        }),
-                                        html.Div(f"{proj['pass_rate']}%", style={
-                                            "fontSize": "20px",
-                                            "fontWeight": "700",
-                                            "color": pass_rate_color(proj['pass_rate'])
-                                        }),
-                                        html.Small("Pass Rate", style={"color": "#64748b"})
-                                    ], style={
-                                        "textAlign": "center",
-                                        "padding": "12px",
-                                        "border": f"2px solid {pass_rate_color(proj['pass_rate'])}",
-                                        "borderRadius": "8px",
-                                        "backgroundColor": "white",
-                                        "boxShadow": "0 2px 6px rgba(0,0,0,0.05)"
-                                    })
-                                ], width=4),
-                                dbc.Col([
-                                    html.Div([
-                                        html.I(className="fas fa-cubes", style={
-                                            "fontSize": "22px",
-                                            "color": "#6366f1"
-                                        }),
-                                        html.Div(f"{proj['modules']}", style={
-                                            "fontSize": "20px",
-                                            "fontWeight": "700"
-                                        }),
-                                        html.Small("Modules", style={"color": "#64748b"})
-                                    ], style={
-                                        "textAlign": "center",
-                                        "padding": "12px",
-                                        "border": "1px solid #e2e8f0",
-                                        "borderRadius": "8px",
-                                        "backgroundColor": "white",
-                                        "boxShadow": "0 2px 6px rgba(0,0,0,0.05)"
-                                    })
-                                ], width=4),
-                                dbc.Col([
-                                    html.Div([
-                                        html.I(className="fas fa-vials", style={
-                                            "fontSize": "22px",
-                                            "color": "#6366f1"
-                                        }),
-                                        html.Div(f"{proj['total_tests']}", style={
-                                            "fontSize": "20px",
-                                            "fontWeight": "700"
-                                        }),
-                                        html.Small("Total Tests", style={"color": "#64748b"})
-                                    ], style={
-                                        "textAlign": "center",
-                                        "padding": "12px",
-                                        "border": "1px solid #e2e8f0",
-                                        "borderRadius": "8px",
-                                        "backgroundColor": "white",
-                                        "boxShadow": "0 2px 6px rgba(0,0,0,0.05)"
-                                    })
-                                ], width=4),
-                            ], className="g-3")
-                        ], style={"padding": "16px"}),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Div([
+                                    html.I(className="fas fa-chart-pie", style={
+                                        "fontSize": "22px",
+                                        "color": pass_rate_color(proj['pass_rate'])
+                                    }),
+                                    html.Div(f"{proj['pass_rate']}%", style={
+                                        "fontSize": "20px",
+                                        "fontWeight": "700",
+                                        "color": pass_rate_color(proj['pass_rate'])
+                                    }),
+                                    html.Small("Pass Rate", style={"color": "#64748b"})
+                                ], className="kpi-card")
+                            ], width=4),
+                            dbc.Col([
+                                html.Div([
+                                    html.I(className="fas fa-cubes", style={
+                                        "fontSize": "22px",
+                                        "color": "#6366f1"
+                                    }),
+                                    html.Div(f"{proj['modules']}", style={
+                                        "fontSize": "20px",
+                                        "fontWeight": "700"
+                                    }),
+                                    html.Small("Modules", style={"color": "#64748b"})
+                                ], className="kpi-card")
+                            ], width=4),
+                            dbc.Col([
+                                html.Div([
+                                    html.I(className="fas fa-vials", style={
+                                        "fontSize": "22px",
+                                        "color": "#6366f1"
+                                    }),
+                                    html.Div(f"{proj['total_tests']}", style={
+                                        "fontSize": "20px",
+                                        "fontWeight": "700"
+                                    }),
+                                    html.Small("Total Tests", style={"color": "#64748b"})
+                                ], className="kpi-card")
+                            ], width=4)
+                        ], className="g-3", style={"padding": "16px"}),
 
                         # Owner & Last Run
-                        html.Div([
-                            dbc.Row([
-                                dbc.Col([
-                                    html.Div([
-                                        html.Small("Owner", style={
-                                            "color": "#64748b",
-                                            "fontSize": "10px"
-                                        }),
-                                        html.H6(proj["owner"], style={
+                        dbc.Row([
+                            dbc.Col([
+                                html.Div([
+                                    html.Small("Owner", style={
+                                        "color": "#64748b",
+                                        "fontSize": "10px"
+                                    }),
+                                    html.H6(proj["owner"], style={
+                                        "margin": "0",
+                                        "color": "#64748b",
+                                        "fontSize": "12px"
+                                    })
+                                ], style={"textAlign": "left"})
+                            ], width=6),
+                            dbc.Col([
+                                html.Div([
+                                    html.Small("Last Run", style={
+                                        "color": "#64748b",
+                                        "fontSize": "10px"
+                                    }),
+                                    html.H6(
+                                        (
+                                            datetime.fromisoformat(proj["last_run"])
+                                            if isinstance(proj["last_run"], str)
+                                            else proj["last_run"]
+                                        ).strftime("%d %b %Y, %H:%M"),
+                                        style={
                                             "margin": "0",
                                             "color": "#64748b",
                                             "fontSize": "12px"
-                                        })
-                                    ], style={"textAlign": "left"})
-                                ], width=6),
-                                dbc.Col([
-                                    html.Div([
-                                        html.Small("Last Run", style={
-                                            "color": "#64748b",
-                                            "fontSize": "10px"
-                                        }),
-                                        html.H6(
-                                            (
-                                                datetime.fromisoformat(proj["last_run"])
-                                                if isinstance(proj["last_run"], str)
-                                                else proj["last_run"]
-                                            ).strftime("%d %b %Y, %H:%M"),
-                                            style={
-                                                "margin": "0",
-                                                "color": "#64748b",
-                                                "fontSize": "12px"
-                                            }
-                                        )
-                                    ], style={"textAlign": "right"})
-                                ], width=6)
-                            ], className="g-3", style={"padding": "0 16px"})
-                        ], style={"marginBottom": "12px"}),
+                                        }
+                                    )
+                                ], style={"textAlign": "right"})
+                            ], width=6)
+                        ], className="g-3", style={"padding": "0 16px", "marginBottom": "12px"}),
 
                         # Action Buttons
-                        html.Div([
-                            dbc.Row([
-                                dbc.Col([dbc.Button(
-                                    [html.I(className="fas fa-chart-line me-1"), "Summary"],
-                                    color="outline-primary", size="sm", className="w-100",
-                                    href=f"/execution-summary?project={proj['value']}"
-                                )], width=3),
-                                dbc.Col([dbc.Button(
-                                    [html.I(className="fas fa-cog me-1"), "Modules"],
-                                    color="outline-secondary", size="sm", className="w-100",
-                                    href=f"/module-details?project_id={proj['value']}"
-                                )], width=3),
-                                dbc.Col([dbc.Button(
-                                    [html.I(className="fas fa-chart-bar me-1"), "Trends"],
-                                    color="outline-info", size="sm", className="w-100",
-                                    href=f"/trends?project={proj['value']}"
-                                )], width=3),
-                                dbc.Col([dbc.Button(
-                                    [html.I(className="fas fa-gear me-1"), "Settings"],
-                                    color="outline-warning", size="sm", className="w-100",
-                                    href=f"/settings?project={proj['value']}"
-                                )], width=3)
-                            ], style={"marginBottom": "8px"})
-                        ], style={
-                            "padding": "12px 14px",
-                            "borderTop": "1px solid #f1f5f9",
-                            "backgroundColor": "#f9fafb"
-                        })
-                    ], style={
-                        "backgroundColor": "white",
-                        "borderRadius": "10px",
-                        "border": "2px solid #e2e8f0",
-                        "boxShadow": "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-                        "marginBottom": "20px",
-                        "transition": "all 0.3s ease",
-                        "overflow": "hidden",
-                        "position": "relative"
-                    }, className="project-card")
-                ], width=6, className="mb-3")
-                for proj in projects
-            ])
+                        dbc.Row([
+                            dbc.Col(dbc.Button(
+                                [html.I(className="fas fa-chart-line me-1"), "Summary"],
+                                color="outline-primary", size="sm", className="w-100",
+                                href=f"/execution-summary?project={proj['value']}"
+                            ), width=3),
+                            dbc.Col(dbc.Button(
+                                [html.I(className="fas fa-cog me-1"), "Modules"],
+                                color="outline-secondary", size="sm", className="w-100",
+                                href=f"/module-details?project_id={proj['value']}"
+                            ), width=3),
+                            dbc.Col(dbc.Button(
+                                [html.I(className="fas fa-chart-bar me-1"), "Trends"],
+                                color="outline-info", size="sm", className="w-100",
+                                href=f"/trends?project={proj['value']}"
+                            ), width=3),
+                            dbc.Col(dbc.Button(
+                                [html.I(className="fas fa-gear me-1"), "Settings"],
+                                color="outline-warning", size="sm", className="w-100",
+                                href=f"/settings?project={proj['value']}"
+                            ), width=3)
+                        ], style={"marginBottom": "8px", "padding": "12px 14px",
+                                  "borderTop": "1px solid #f1f5f9",
+                                  "backgroundColor": "#f9fafb"})
+                    ], className="project-card")
+                ]),
+                width=6, className="mb-3"
+            )
+            for proj in projects
         ])
     ], className="projects-container")
