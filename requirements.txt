@@ -7,7 +7,7 @@ dash-bootstrap-components
 pandas
 plotly
 asyncpg==0.29.0
-psycopg2-binary==2.9.7
+psycopg2-binary==2.9.11
 httpx
 alembic==1.12.1
 elasticsearch==8.11.0
