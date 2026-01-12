@@ -47,28 +47,66 @@ body {
     width: 100%;
     position: relative;
 }
-
+/* Brand Icon Wrapper */
 .brand-icon-wrapper {
     width: 48px;
     height: 48px;
-    background: linear-gradient(135deg, #10b981, #059669);
-    border-radius: 12px;
+    border-radius: 50%; /* Make it perfectly round */
+    overflow: hidden;   /* Hide overflow so image stays inside circle */
     display: flex;
     align-items: center;
     justify-content: center;
+    background: linear-gradient(135deg, #10b981, #059669);
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
     flex-shrink: 0;
-    position: absolute; /* Fixed position to prevent movement */
+    position: absolute;
     left: 0;
     top: 50%;
     transform: translateY(-50%);
 }
 
-/* Brand icon styling */
-.brand-icon-wrapper .fas {
-    font-size: 1.8rem;
-    color: white;
+/* Brand Icon Image */
+.brand-icon-img {
+    width: 110%;
+    height: 110%;
+    object-fit: cover; /* fills the circle perfectly */
+    display: block;
 }
+
+/* Brand Text */
+.brand-text {
+    opacity: 0;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-left: 60px; /* space from icon */
+    height: 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: calc(100% - 60px);
+    text-align: left; /* align left for better readability */
+}
+
+.sidebar-professional:hover .brand-text {
+    opacity: 1;
+}
+
+/* Brand Title */
+.brand-title {
+    color: white;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem 0;
+}
+
+/* Brand Subtitle */
+.brand-subtitle {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin: 0;
+    line-height: 1;
+}
+
 
 .brand-text {
     opacity: 0;
