@@ -97,6 +97,7 @@ def update_projects_store(_):
             "pass_rate": proj.get("pass_rate", 0),
             "total_tests": proj.get("total_tests", 0),
             "owner": proj.get("owner", "Unknown"),
+            "defects": 12  # 🔹 Hardcoded defect count for now
         })
     return projects
 
@@ -287,7 +288,7 @@ def render_projects(projects, old_content):
                             })
                         ], className="project-card-header"),
 
-                        # KPI Row
+                        # KPI Row (Added Defect Count)
                         dbc.Row([
                             dbc.Col([
                                 html.Div([
@@ -302,7 +303,7 @@ def render_projects(projects, old_content):
                                     }),
                                     html.Small("Pass Rate", style={"color": "#64748b"})
                                 ], className="kpi-card")
-                            ], width=4),
+                            ], width=3),
                             dbc.Col([
                                 html.Div([
                                     html.I(className="fas fa-cubes", style={
@@ -315,7 +316,7 @@ def render_projects(projects, old_content):
                                     }),
                                     html.Small("Modules", style={"color": "#64748b"})
                                 ], className="kpi-card")
-                            ], width=4),
+                            ], width=3),
                             dbc.Col([
                                 html.Div([
                                     html.I(className="fas fa-vials", style={
@@ -328,7 +329,21 @@ def render_projects(projects, old_content):
                                     }),
                                     html.Small("Total Tests", style={"color": "#64748b"})
                                 ], className="kpi-card")
-                            ], width=4)
+                            ], width=3),
+                            dbc.Col([
+                                html.Div([
+                                    html.I(className="fas fa-bug", style={
+                                        "fontSize": "22px",
+                                        "color": "#ef4444"
+                                    }),
+                                    html.Div(f"{proj['defects']}", style={
+                                        "fontSize": "20px",
+                                        "fontWeight": "700",
+                                        "color": "#ef4444"
+                                    }),
+                                    html.Small("Defects", style={"color": "#64748b"})
+                                ], className="kpi-card")
+                            ], width=3)
                         ], className="g-3", style={"padding": "16px"}),
 
                         # Owner & Last Run
@@ -390,9 +405,12 @@ def render_projects(projects, old_content):
                                 color="outline-warning", size="sm", className="w-100",
                                 href=f"/settings?project={proj['value']}"
                             ), width=3)
-                        ], style={"marginBottom": "8px", "padding": "12px 14px",
-                                  "borderTop": "1px solid #f1f5f9",
-                                  "backgroundColor": "#f9fafb"})
+                        ], style={
+                            "marginBottom": "8px",
+                            "padding": "12px 14px",
+                            "borderTop": "1px solid #f1f5f9",
+                            "backgroundColor": "#f9fafb"
+                        })
                     ], className="project-card")
                 ]),
                 width=6, className="mb-3"

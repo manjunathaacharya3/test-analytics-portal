@@ -30,4 +30,4 @@ RUN ./venv/bin/pip install -r requirements.txt
 EXPOSE 8050
 
 # Run app (adjust if needed)
-CMD ["./venv/bin/python", "ui/dashboard.py"]
+CMD ["./venv/bin/python", "python -m uvicorn service.main:app --reload --host 0.0.0.0 --port 8000", "ui/dashboard.py"]

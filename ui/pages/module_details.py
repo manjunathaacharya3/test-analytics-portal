@@ -361,6 +361,7 @@ def filter_dynamic_runs_by_date(selected_date, selected_module):
     return executions
 
 
+# ---------------- Update show_scenarios_dynamic ---------------- #
 @callback(
     Output("module-details-scenarios-section", "children"),
     Input("module-details-runs-table", "selected_rows"),
@@ -371,11 +372,9 @@ def show_scenarios_dynamic(selected_rows, table_data):
         return html.Div([html.P("Select a Run ID to see scenarios.", className="info-message")])
 
     try:
-        # Make sure index is valid
         idx = selected_rows[0]
         if idx >= len(table_data):
             return html.Div([html.P("Invalid run selection.", className="info-message")])
-
         run_id = table_data[idx].get("run_id")
     except Exception:
         return html.Div([html.P("Error retrieving run ID.", className="error-message")])
@@ -387,59 +386,47 @@ def show_scenarios_dynamic(selected_rows, table_data):
     normalized_data = []
     tooltip_rows = []
 
-    for sc in sc_data:
-        # --- status icon ---
+    for i, sc in enumerate(sc_data):
         s = str(sc.get("status", "")).lower()
-        if s in ["passed", "success", "green"]:
-            status_icon = "✅"
-        else:
-            status_icon = "❌"
+        status_icon = "✅" if s in ["passed", "success", "green"] else "❌"
 
-        # --- tags (string) ---
-        tags = sc.get("tags")
-        if isinstance(tags, list):
-            tags_str = ", ".join([str(t) for t in tags])
-        else:
-            tags_str = str(tags) if tags is not None else "-"
-
-        # --- attachments => markdown link string ---
+        tags = ", ".join(sc.get("tags", [])) if isinstance(sc.get("tags"), list) else sc.get("tags", "-")
         attachments = sc.get("attachments") or []
-        if isinstance(attachments, list) and attachments:
-            attachments_md = " | ".join([f"[{att}](/assets/{att})" for att in attachments])
-        else:
-            attachments_md = "-"
+        attachments_md = " | ".join([f"[{att}](/assets/{att})" for att in attachments]) if attachments else "-"
 
-        # --- error cell (short label) and full error for tooltip ---
-        error_text = sc.get("error") or ""
-        error_cell = "View" if error_text else "-"
+        defect_id = sc.get("defect_id", "-")
+        link_defect_btn = (
+            f"<span style='color:#2563eb;font-weight:500'>{defect_id}</span>"
+            if defect_id != "-"
+            else (
+                "<div style='text-align:center;'>"
+                "<button style='background-color:#dc2626;"
+                "color:white;border:none;border-radius:4px;"
+                "padding:2px 8px;font-size:0.75rem;cursor:pointer;'>"
+                "Link Defect</button></div>"
+            )
+            if status_icon == "❌"
+            else "-"
+        )
 
         normalized_row = {
-            "scenario": str(sc.get("scenario", "")),
-            "tags": tags_str,
-            "duration": str(sc.get("duration", "")),
+            "scenario": sc.get("scenario", ""),
+            "tags": tags,
+            "duration": sc.get("duration", ""),
             "status": status_icon,
-            "failed_step": str(sc.get("failed_step", "")),
-            "error": error_cell,
+            "failed_step": sc.get("failed_step", ""),
+            "error": "View" if sc.get("error") else "-",
             "attachments": attachments_md,
+            "defect": link_defect_btn,
+            "index": i,  # keep row index reference
         }
 
-        # Build tooltip row (all values stringified)
-        tooltip_row = {}
-        for col, val in normalized_row.items():
-            # For the error column we want the full raw error text in the tooltip (not the 'View' label)
-            if col == "error":
-                tooltip_val = str(error_text)
-            elif col == "attachments":
-                tooltip_val = str(attachments_md)
-            else:
-                tooltip_val = str(val)
-            tooltip_row[col] = {"value": tooltip_val, "type": "markdown"}
-
-        normalized_data.append(normalized_row)
+        tooltip_row = {k: {"value": str(v), "type": "markdown"} for k, v in normalized_row.items()}
         tooltip_rows.append(tooltip_row)
+        normalized_data.append(normalized_row)
 
     return html.Div([
-        html.H5(f"Scenario wise execution details - ", className="scenarios-title"),
+        html.H5("Scenario wise execution details", className="scenarios-title"),
         dash_table.DataTable(
             id="module-details-scenarios-table",
             columns=[
@@ -450,9 +437,12 @@ def show_scenarios_dynamic(selected_rows, table_data):
                 {"name": "Failed Step", "id": "failed_step"},
                 {"name": "Error", "id": "error"},
                 {"name": "Attachments", "id": "attachments", "presentation": "markdown"},
+                {"name": "Defect", "id": "defect", "presentation": "markdown"},
             ],
             data=normalized_data,
-            markdown_options={"html": True},
+            markdown_options={"html": True, "link_target": "_self"},
+            tooltip_data=tooltip_rows,
+            tooltip_duration=None,
             style_cell={
                 "textAlign": "center",
                 "fontFamily": "inherit",
@@ -465,24 +455,75 @@ def show_scenarios_dynamic(selected_rows, table_data):
                 "color": "white",
                 "fontWeight": "bold",
             },
-            style_data={"whiteSpace": "normal", "height": "auto"},
             style_data_conditional=[
-                {"if": {"column_id": "scenario"}},
                 {"if": {"filter_query": "{status} = '✅'"}, "backgroundColor": "#e6f7ec"},
-                {"if": {"filter_query": "{status} = '❌'"}, "backgroundColor": "#fdecea"}
+                {"if": {"filter_query": "{status} = '❌'"}, "backgroundColor": "#fdecea"},
             ],
-            style_cell_conditional=[
-                {"if": {"column_id": "scenario"}, "width": "30%"},
-                {"if": {"column_id": "tags"}, "width": "10%"},
-                {"if": {"column_id": "duration"}, "width": "10%"},
-                {"if": {"column_id": "status"}, "width": "10%"},
-                {"if": {"column_id": "failed_step"}, "width": "30%"},
-                {"if": {"column_id": "error"}, "width": "10%"},
-                {"if": {"column_id": "attachments"}, "width": "10%"},
-            ],
-            tooltip_data=tooltip_rows,
-            tooltip_duration=None,
             page_size=10,
             style_table={"overflowX": "auto", "width": "100%"},
-        )
+        ),
+        dbc.Modal(
+            [
+                dbc.ModalHeader(dbc.ModalTitle("Link Defect")),
+                dbc.ModalBody([
+                    dbc.Input(id="defect-id-input", placeholder="Enter Defect ID...", type="text"),
+                    html.Div(id="defect-error-msg", style={"color": "red", "marginTop": "5px"})
+                ]),
+                dbc.ModalFooter([
+                    dbc.Button("OK", id="defect-ok-btn", color="primary"),
+                    dbc.Button("Cancel", id="defect-cancel-btn", color="secondary")
+                ])
+            ],
+            id="defect-modal",
+            is_open=False,
+        ),
+        dcc.Store(id="defect-edit-row-index", data=None),
+        dcc.Store(id="defect-linked-data", data={}),
     ])
+
+
+# ---------------- Link Defect Modal Callbacks ---------------- #
+
+@callback(
+    Output("defect-modal", "is_open"),
+    Output("defect-edit-row-index", "data"),
+    Input("module-details-scenarios-table", "active_cell"),
+    State("module-details-scenarios-table", "data"),
+    State("defect-modal", "is_open"),
+)
+def open_defect_modal(active_cell, table_data, is_open):
+    if active_cell and table_data:
+        row = active_cell["row"]
+        col = active_cell["column_id"]
+        cell_value = table_data[row]["defect"]
+        if col == "defect" and "Link Defect" in cell_value:
+            return True, row
+    return False, None
+
+
+@callback(
+    Output("module-details-scenarios-table", "data"),
+    Output("defect-modal", "is_open", allow_duplicate=True),
+    Output("defect-id-input", "value"),
+    Input("defect-ok-btn", "n_clicks"),
+    Input("defect-cancel-btn", "n_clicks"),
+    State("defect-id-input", "value"),
+    State("defect-edit-row-index", "data"),
+    State("module-details-scenarios-table", "data"),
+    prevent_initial_call=True
+)
+def save_defect_link(ok_click, cancel_click, defect_id, row_index, table_data):
+    """Save defect link into table."""
+    ctx = dash.callback_context
+    if not ctx.triggered or not table_data:
+        return table_data, False, ""
+
+    trigger = ctx.triggered[0]["prop_id"].split(".")[0]
+    if trigger == "defect-cancel-btn":
+        return table_data, False, ""
+
+    if not defect_id or row_index is None:
+        return table_data, False, ""
+
+    table_data[row_index]["defect"] = f"[{defect_id}](#)"
+    return table_data, False, ""

@@ -28,9 +28,11 @@ app = dash.Dash(
 menu_items = [
     {"name": "Projects", "href": "/projects", "icon": "fas fa-project-diagram"},
     {"name": "Execution Summary", "href": "/execution-summary", "icon": "fas fa-chart-line"},
-    {"name": "Module Details", "href": "/module-details", "icon": "fas fa-cogs"},
     {"name": "Trends", "href": "/trends", "icon": "fas fa-chart-bar"},
-    {"name": "Settings", "href": "/settings", "icon": "fas fa-gear"},
+    {"name": "Module Details", "href": "/module-details", "icon": "fas fa-cogs"},
+    {"name": "Defect Management", "href": "/defect-management", "icon": "fas fa-bug"},
+    {"name": "AI Insights", "href": "/ai-failure-analysis", "icon": "fas fa-brain"},
+    {"name": "Settings", "href": "/settings", "icon": "fas fa-gear"}
 ]
 
 # Professional sidebar component
@@ -41,16 +43,22 @@ sidebar = html.Div(
             [
                 html.Div(
                     [
+                        # Brand Icon (Image)
                         html.Div(
                             [
-                                html.I(className="fas fa-flask")
+                                html.Img(
+                                    src="assets/logo.svg",
+                                    className="brand-icon-img"
+                                )
                             ],
                             className="brand-icon-wrapper"
                         ),
+
+                        # Brand Text
                         html.Div(
                             [
-                                html.H4("T A P", className="brand-title"),
-                                html.Small("Test Analytics Portal", className="brand-subtitle"),
+                                html.H4("T A P S", className="brand-title"),
+                                html.Small("Test Analytics & Predictive System", className="brand-subtitle"),
                             ],
                             className="brand-text"
                         )
