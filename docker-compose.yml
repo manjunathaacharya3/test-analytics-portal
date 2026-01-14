@@ -1,0 +1,24 @@
+services:
+  backend:
+    build: .
+    container_name: taps-backend
+    command:
+      [ "python", "-m", "uvicorn", "service.main:app", "--host", "0.0.0.0", "--port", "8000" ]
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 10s
+      retries: 5
+
+  dashboard:
+    build: .
+    container_name: taps-dashboard
+    command: [ "python", "ui/dashboard.py" ]
+    ports:
+      - "8050:8050"
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      BACKEND_URL: http://backend:8000
