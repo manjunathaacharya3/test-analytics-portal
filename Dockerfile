@@ -1,33 +1,11 @@
-FROM ubuntu:22.04
+FROM python:3.11-slim
 
-# Avoid interactive prompts
-ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    python3-venv \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set working directory
 WORKDIR /app
 
-# Clone repository
-RUN git clone https://github.com/manjunathaacharya3/test-analytics-portal.git .
+COPY requirements.txt .
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Checkout branch
-RUN git checkout develop
-
-# Create virtual environment
-RUN python3 -m venv venv
-
-# Install dependencies using venv pip
-RUN ./venv/bin/pip install --upgrade pip setuptools wheel
-RUN ./venv/bin/pip install -r requirements.txt
-
-EXPOSE 8050
-
-# Run app (adjust if needed)
-CMD ["bash", "-c", "./venv/bin/python -m uvicorn service.main:app --host 0.0.0.0 --port 8000 & ./venv/bin/python ui/dashboard.py"]
+COPY . .
