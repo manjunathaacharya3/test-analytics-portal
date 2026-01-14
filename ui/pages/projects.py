@@ -9,7 +9,7 @@ from dash import html, dcc, callback, Output, Input, State
 
 dash.register_page(__name__, path="/projects", name="Projects")
 
-API_BASE_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+API_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
 def timed_cache(seconds=3600):
