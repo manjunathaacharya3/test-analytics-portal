@@ -1,3 +1,4 @@
+import os
 from urllib.parse import parse_qs, urlparse
 
 import dash
@@ -5,6 +6,8 @@ import dash_bootstrap_components as dbc
 from dash import html, dcc, Input, Output, State, callback
 
 dash.register_page(__name__, path="/settings", name="Settings")
+
+API_BASE_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 # ---------------- Layout ---------------- #
 layout = dbc.Container([
@@ -147,7 +150,7 @@ def handle_save_project(n_clicks, name, owner, description, repo_url):
             "description": description,
             "repository_url": repo_url
         }
-        response = requests.post("http://localhost:8000/projects/create_project", json=payload)
+        response = requests.post(API_BASE_URL + "/projects/create_project", json=payload)
         response.raise_for_status()
         data = response.json()
         # You can optionally return the created project info from data

@@ -1,31 +1,24 @@
-version: "3.9"
-
 services:
   backend:
     build: .
     container_name: taps-backend
     command:
-      [
-        "./venv/bin/python",
-        "-m",
-        "uvicorn",
-        "service.main:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8000"
-      ]
+      [ "python", "-m", "uvicorn", "service.main:app", "--host", "0.0.0.0", "--port", "8000" ]
     ports:
       - "8000:8000"
-    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 10s
+      retries: 5
 
   dashboard:
     build: .
     container_name: taps-dashboard
-    command:
-      [ "./venv/bin/python", "ui/dashboard.py" ]
+    command: [ "python", "ui/dashboard.py" ]
     ports:
       - "8050:8050"
     depends_on:
-      - backend
-    restart: unless-stopped
+      backend:
+        condition: service_healthy
+    environment:
+      BACKEND_URL: http://backend:8000

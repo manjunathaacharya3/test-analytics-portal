@@ -1,3 +1,4 @@
+import os
 import time
 from datetime import datetime
 from urllib.parse import parse_qs
@@ -11,7 +12,7 @@ from dash import html, dcc, dash_table, callback, Input, Output, State
 dash.register_page(__name__, path="/execution-summary", name="Execution Summary")
 
 # ---------------- Configuration ----------------
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 PROJECTS_API = f"{API_BASE_URL}/projects/all_projects"
 
 

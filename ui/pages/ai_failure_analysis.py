@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import logging
+import os
 import time
 from datetime import datetime, timedelta
 
@@ -14,7 +15,7 @@ from dash import html, dcc, dash_table, callback, Input, Output, State
 
 dash.register_page(__name__, path="/ai-failure-analysis", name="AI Failure Analysis")
 
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 PROJECTS_API = f"{API_BASE_URL}/projects/all_projects"
 
 PROJECT_RELATED_MODULES = None

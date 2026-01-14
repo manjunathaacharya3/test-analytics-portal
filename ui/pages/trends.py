@@ -1,4 +1,5 @@
 # trends.py
+import os
 import time
 from datetime import timedelta
 from urllib.parse import parse_qs
@@ -12,7 +13,7 @@ from dash import html, dcc, Input, Output, State, callback
 
 dash.register_page(__name__, path="/trends", name="Trends")
 
-API_BASE = "http://localhost:8000"
+API_BASE_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
 # ---------------- Simple Cache ---------------- #
