@@ -1,0 +1,1 @@
+"""TAPS Modules - Modular Monolith Architecture"""

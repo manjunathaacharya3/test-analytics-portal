@@ -1,0 +1,282 @@
+/* ============================================
+   FIXED COLLAPSED SIDEBAR WITH TOOLTIPS
+   
+   Features:
+   - Fixed 60px width (never expands)
+   - Icon-only navigation
+   - Tooltips on hover (right side)
+   - Active state indicators
+   - Smooth animations
+   - Accessibility (ARIA labels)
+   ============================================ */
+
+/* ========== Container ========== */
+.sidebar-fixed {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: 80px; /* Same as before - proper collapsed size */
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  overflow: visible; /* Allow tooltips to show outside */
+}
+
+/* ========== Brand Section ========== */
+.sidebar-brand {
+  width: 100%;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 10px;
+}
+
+.brand-icon-fixed {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%); /* Green gradient */
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.brand-icon-fixed:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
+}
+
+.brand-icon-img {
+  width: 26px;
+  height: 26px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* ========== Navigation ========== */
+.sidebar-nav {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 0;
+  overflow-y: auto;
+  overflow-x: visible;
+}
+
+/* Hide scrollbar but keep functionality */
+.sidebar-nav::-webkit-scrollbar {
+  width: 0;
+  display: none;
+}
+
+.sidebar-nav {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* ========== Navigation Items ========== */
+.nav-item-fixed {
+  position: relative;
+  width: 60px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 18px; /* Slightly smaller icons */
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.nav-item-fixed:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  transform: translateX(2px);
+}
+
+.nav-item-fixed.active {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%); /* Green gradient */
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.nav-item-fixed.active::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 28px;
+  background: #10b981; /* Green accent bar */
+  border-radius: 0 2px 2px 0;
+  pointer-events: none; /* Don't interfere with hover */
+  z-index: 1; /* Below tooltip */
+}
+
+/* ========== Tooltips ========== */
+/* Tooltip for navigation items - using ::after only (::before is used for active indicator) */
+.nav-item-fixed::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 16px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1e293b;
+  color: #ffffff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), -2px 0 8px rgba(16, 185, 129, 0.1);
+  z-index: 10001;
+}
+
+/* Tooltip for user avatar - can use ::before since no active state */
+.user-avatar-fixed::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 16px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1e293b;
+  color: #ffffff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 10001;
+}
+
+/* Show tooltip on hover with delay */
+.nav-item-fixed:hover::after,
+.nav-item-fixed.active:hover::after {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(-50%) translateX(4px);
+  transition-delay: 0.1s; /* Show immediately - 0.1s */
+}
+
+.user-avatar-fixed:hover::after {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(-50%) translateX(4px);
+  transition-delay: 0.1s; /* Show immediately - 0.1s */
+}
+
+/* Ensure tooltip shows above active indicator */
+.nav-item-fixed.active::after {
+  z-index: 10002;
+}
+
+/* ========== User Section ========== */
+.sidebar-user {
+  width: 100%;
+  padding: 15px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-avatar-fixed {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 22px; /* Slightly smaller user icon */
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.user-avatar-fixed:hover {
+  background: rgba(16, 185, 129, 0.2); /* Green tint on hover */
+  color: #ffffff;
+  transform: scale(1.1);
+}
+
+/* ========== Responsive Adjustments ========== */
+@media (max-width: 768px) {
+  .sidebar-fixed {
+    width: 70px; /* Slightly smaller on mobile but still proper size */
+  }
+
+  .nav-item-fixed {
+    width: 50px;
+    height: 45px;
+    font-size: 18px;
+  }
+
+  .brand-icon-fixed {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* ========== Accessibility ========== */
+.nav-item-fixed:focus,
+.user-avatar-fixed:focus {
+  outline: 2px solid #10b981; /* Green focus outline */
+  outline-offset: 2px;
+}
+
+/* Focus visible (keyboard navigation) */
+.nav-item-fixed:focus-visible,
+.user-avatar-fixed:focus-visible {
+  outline: 2px solid #10b981; /* Green focus outline */
+  outline-offset: 2px;
+}
+
+/* ========== Animations ========== */
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.sidebar-fixed {
+  animation: slideInFromLeft 0.3s ease-out;
+}
+
+/* ========== Print Styles ========== */
+@media print {
+  .sidebar-fixed {
+    display: none;
+  }
+}
