@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { apiService, Defect, Project } from '@/services/api';
+import { PageHeader, PageContainer } from '@/components/molecules';
 
 // Type for UI defect (mapped from backend)
 interface UIDefect {
@@ -41,7 +41,6 @@ const capitalize = (str: string) => {
 };
 
 export default function DefectManagementPage() {
-  const router = useRouter();
   const [selectedProject, setSelectedProject] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [selectedDefect, setSelectedDefect] = useState<UIDefect | null>(null);
@@ -163,41 +162,9 @@ export default function DefectManagementPage() {
   }
 
   return (
-    <div style={{ padding: '18px', background: 'var(--bg-primary)', minHeight: '100vh' }}>
+    <PageContainer>
       {/* Header */}
-      <div style={{ marginBottom: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        {/* Title */}
-        <h1
-          style={{
-            fontSize: '20px',
-            fontWeight: 700,
-            color: 'var(--text-primary)',
-            margin: 0,
-          }}
-        >
-          Defect Management
-        </h1>
-        
-        {/* Back Button */}
-        <button
-          onClick={() => router.push('/projects')}
-          style={{
-            background: '#374151',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            padding: '5px 10px',
-            fontSize: '12px',
-            fontWeight: 500,
-            cursor: 'pointer',
-            transition: 'background 0.2s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = '#111827')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = '#374151')}
-        >
-          ← Back to Projects
-        </button>
-      </div>
+      <PageHeader title="Defect Management" />
 
       {/* Filters */}
       <div
@@ -842,6 +809,6 @@ export default function DefectManagementPage() {
           </div>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

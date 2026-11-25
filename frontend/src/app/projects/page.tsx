@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiService, ApiError } from '@/services/api';
+import { PageHeader, PageContainer } from '@/components/molecules';
 
 // Backend API response structure (matches ProjectOverviewResponse from backend)
 interface BackendProject {
@@ -106,6 +107,16 @@ const ProjectsPage: React.FC = () => {
     fetchProjects();
   }, []);
 
+  // Sort projects: active projects first, then inactive; alphabetically by name within each group
+  const sortedProjects = useMemo(() => {
+    return [...projects].sort((a, b) => {
+      if (a.status !== b.status) {
+        return a.status === 'active' ? -1 : 1;
+      }
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    });
+  }, [projects]);
+
   // Calculate summary metrics
   const activeProjectsCount = projects.filter(p => p.status === 'active').length;
   const totalTestCases = projects.reduce((sum, p) => sum + p.totalTests, 0);
@@ -142,7 +153,7 @@ const ProjectsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <PageContainer>
       <style jsx global>{`
         @keyframes pulse {
           0%, 100% {
@@ -206,44 +217,33 @@ const ProjectsPage: React.FC = () => {
       )}
 
       {/* Page Header */}
-      <div className="mb-6">
-        <h1 style={{
-          fontSize: '24px',
-          fontWeight: 700,
-          color: '#0f172a',
-          letterSpacing: '-0.5px',
-          marginBottom: '8px'
-        }}>
-          Projects
-        </h1>
-        <p style={{
-          fontSize: '12px',
-          color: '#64748b',
-          marginBottom: '12px'
-        }}>
-          Monitor and manage your automation testing projects
-        </p>
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          backgroundColor: '#f1f5f9',
-          padding: '8px 16px',
-          borderRadius: '6px'
-        }}>
-          <i className="fas fa-sync-alt" style={{
-            fontSize: '11px',
-            color: '#64748b',
-            marginRight: '8px',
-            cursor: 'pointer'
-          }} onClick={handleRefresh}></i>
-          <span style={{
-            fontSize: '11px',
-            color: '#64748b'
+      <PageHeader
+        title="Projects"
+        subtitle="Monitor and manage your automation testing projects"
+        showBackButton={false}
+        rightContent={
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            backgroundColor: '#f1f5f9',
+            padding: '8px 16px',
+            borderRadius: '6px'
           }}>
-            Last updated: {lastUpdated}
-          </span>
-        </div>
-      </div>
+            <i className="fas fa-sync-alt" style={{
+              fontSize: '11px',
+              color: '#64748b',
+              marginRight: '8px',
+              cursor: 'pointer'
+            }} onClick={handleRefresh}></i>
+            <span style={{
+              fontSize: '11px',
+              color: '#64748b'
+            }}>
+              Last updated: {lastUpdated}
+            </span>
+          </div>
+        }
+      />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
@@ -324,7 +324,7 @@ const ProjectsPage: React.FC = () => {
 
       {/* Project Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {projects.map((project) => (
+        {sortedProjects.map((project) => (
           <div key={project.id} className="project-card" style={{
             backgroundColor: 'white',
             borderRadius: '12px',
@@ -742,7 +742,7 @@ const ProjectsPage: React.FC = () => {
           </div>
         ))}
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

@@ -64,6 +64,16 @@
 }
 
 /* ========== Navigation ========== */
+/* IMPORTANT: overflow-x and overflow-y must NOT be set to different
+   non-"visible" values here. Per the CSS spec, if one axis is anything
+   other than "visible", the browser silently forces the OTHER axis to
+   "auto" as well - even if it was explicitly declared "visible". That
+   previously clipped the nav item tooltips (which intentionally render
+   outside this container's bounds) while leaving the Admin User tooltip
+   (in a separate, non-overflow container) unaffected. Using a single
+   "overflow: visible" here (matching the parent .sidebar-fixed) avoids
+   the clipping entirely. With only 7 icons in a full-height sidebar,
+   vertical scrolling is not required in practice. */
 .sidebar-nav {
   flex: 1;
   width: 100%;
@@ -72,50 +82,99 @@
   align-items: center;
   gap: 4px;
   padding: 10px 0;
-  overflow-y: auto;
-  overflow-x: visible;
+  overflow: visible;
 }
 
-/* Hide scrollbar but keep functionality */
-.sidebar-nav::-webkit-scrollbar {
-  width: 0;
-  display: none;
-}
-
-.sidebar-nav {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-/* ========== Navigation Items ========== */
-.nav-item-fixed {
+/* ========== Sidebar Action (shared base for nav items AND avatar) ==========
+   Single source of truth for every hoverable icon button in the sidebar.
+   Both the navigation icons and the user avatar render as a real <button>
+   with this exact same base class, so tooltip/hover/focus behavior can
+   never drift out of sync between the two sections again. Only shape/size
+   differ, via the --nav / --avatar modifier classes below. */
+.sidebar-action {
   position: relative;
-  width: 60px;
-  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
   color: rgba(255, 255, 255, 0.7);
-  font-size: 18px; /* Slightly smaller icons */
   text-decoration: none;
   transition: all 0.2s ease;
   cursor: pointer;
+  /* Reset native <button> styling so it looks like a plain icon */
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
-.nav-item-fixed:hover {
+/* ---------- Shared tooltip (data-tooltip driven) ---------- */
+.sidebar-action::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 16px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1e293b;
+  color: #ffffff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.1s ease, transform 0.1s ease;
+  transition-delay: 0s;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), -2px 0 8px rgba(16, 185, 129, 0.1);
+  z-index: 10001;
+}
+
+/* Show tooltip on hover immediately - no delay */
+.sidebar-action:hover::after {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(-50%) translateX(4px);
+  transition-delay: 0s; /* Show immediately */
+}
+
+/* Ensure tooltip shows above the active indicator */
+.sidebar-action.active::after {
+  z-index: 10002;
+}
+
+/* ---------- Shared focus/accessibility styles ---------- */
+.sidebar-action:focus,
+.sidebar-action:focus-visible {
+  outline: 2px solid #10b981; /* Green focus outline */
+  outline-offset: 2px;
+}
+
+/* ========== Navigation variant ========== */
+.sidebar-action--nav {
+  width: 60px;
+  height: 50px;
+  border-radius: 10px;
+  font-size: 18px; /* Slightly smaller icons */
+}
+
+.sidebar-action--nav:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #ffffff;
   transform: translateX(2px);
 }
 
-.nav-item-fixed.active {
+.sidebar-action--nav.active {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%); /* Green gradient */
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
-.nav-item-fixed.active::before {
+.sidebar-action--nav.active::before {
   content: '';
   position: absolute;
   left: -4px;
@@ -129,72 +188,6 @@
   z-index: 1; /* Below tooltip */
 }
 
-/* ========== Tooltips ========== */
-/* Tooltip for navigation items - using ::after only (::before is used for active indicator) */
-.nav-item-fixed::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  left: calc(100% + 16px);
-  top: 50%;
-  transform: translateY(-50%);
-  background: #1e293b;
-  color: #ffffff;
-  padding: 8px 14px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), -2px 0 8px rgba(16, 185, 129, 0.1);
-  z-index: 10001;
-}
-
-/* Tooltip for user avatar - can use ::before since no active state */
-.user-avatar-fixed::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  left: calc(100% + 16px);
-  top: 50%;
-  transform: translateY(-50%);
-  background: #1e293b;
-  color: #ffffff;
-  padding: 8px 14px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  z-index: 10001;
-}
-
-/* Show tooltip on hover with delay */
-.nav-item-fixed:hover::after,
-.nav-item-fixed.active:hover::after {
-  opacity: 1 !important;
-  visibility: visible !important;
-  transform: translateY(-50%) translateX(4px);
-  transition-delay: 0.1s; /* Show immediately - 0.1s */
-}
-
-.user-avatar-fixed:hover::after {
-  opacity: 1 !important;
-  visibility: visible !important;
-  transform: translateY(-50%) translateX(4px);
-  transition-delay: 0.1s; /* Show immediately - 0.1s */
-}
-
-/* Ensure tooltip shows above active indicator */
-.nav-item-fixed.active::after {
-  z-index: 10002;
-}
-
 /* ========== User Section ========== */
 .sidebar-user {
   width: 100%;
@@ -205,22 +198,17 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.user-avatar-fixed {
-  position: relative;
+/* ========== Avatar variant ========== */
+.sidebar-action--avatar {
   width: 48px;
   height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.8);
   font-size: 22px; /* Slightly smaller user icon */
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.user-avatar-fixed:hover {
+.sidebar-action--avatar:hover {
   background: rgba(16, 185, 129, 0.2); /* Green tint on hover */
   color: #ffffff;
   transform: scale(1.1);
@@ -232,7 +220,7 @@
     width: 70px; /* Slightly smaller on mobile but still proper size */
   }
 
-  .nav-item-fixed {
+  .sidebar-action--nav {
     width: 50px;
     height: 45px;
     font-size: 18px;
@@ -242,20 +230,6 @@
     width: 42px;
     height: 42px;
   }
-}
-
-/* ========== Accessibility ========== */
-.nav-item-fixed:focus,
-.user-avatar-fixed:focus {
-  outline: 2px solid #10b981; /* Green focus outline */
-  outline-offset: 2px;
-}
-
-/* Focus visible (keyboard navigation) */
-.nav-item-fixed:focus-visible,
-.user-avatar-fixed:focus-visible {
-  outline: 2px solid #10b981; /* Green focus outline */
-  outline-offset: 2px;
 }
 
 /* ========== Animations ========== */

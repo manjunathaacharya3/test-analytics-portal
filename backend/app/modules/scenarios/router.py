@@ -1,5 +1,6 @@
 """Scenario API endpoints."""
 
+import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -9,8 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 # from app.core.security import get_current_user  # Temporarily disabled for testing
 # from app.modules.auth.models import User  # Temporarily disabled for testing
-from app.modules.reports.models import Scenario
-from app.modules.scenarios.schemas import ScenarioListResponse, ScenarioResponse
+from app.modules.reports.models import Report, Scenario
+from app.modules.scenarios.schemas import (
+    FailedScenarioListResponse,
+    FailedScenarioResponse,
+    ScenarioListResponse,
+    ScenarioResponse,
+)
+from app.projects.models import Module, Project
 
 router = APIRouter(prefix="/scenarios", tags=["scenarios"])
 
@@ -82,6 +89,99 @@ async def list_scenarios(
     
     return ScenarioListResponse(
         scenarios=[ScenarioResponse.from_orm(s) for s in scenarios],
+        total=total,
+        page=page,
+        size=size,
+        pages=pages
+    )
+
+
+@router.get(
+    "/failures",
+    response_model=FailedScenarioListResponse,
+    summary="List failed scenarios",
+    description=(
+        "Get paginated list of failed scenarios enriched with project and "
+        "module context, for use in failure analysis views. Public endpoint "
+        "(no auth required)."
+    )
+)
+async def list_failed_scenarios(
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(50, ge=1, le=100, description="Page size"),
+    project_id: Optional[uuid.UUID] = Query(None, description="Filter by project ID"),
+    module_id: Optional[uuid.UUID] = Query(None, description="Filter by module ID"),
+    search: Optional[str] = Query(None, description="Search in name or error message"),
+    db: AsyncSession = Depends(get_db)
+) -> FailedScenarioListResponse:
+    """List failed scenarios with project/module context.
+
+    Args:
+        page: Page number
+        size: Page size
+        project_id: Optional project ID filter
+        module_id: Optional module ID filter
+        search: Search query
+        db: Database session
+
+    Returns:
+        Paginated list of failed scenarios with project/module names
+    """
+    base_query = (
+        select(Scenario, Report, Module, Project)
+        .join(Report, Scenario.report_id == Report.id)
+        .join(Module, Report.module_id == Module.id)
+        .join(Project, Report.project_id == Project.id)
+        .where(Scenario.status == "failed")
+    )
+
+    if project_id:
+        base_query = base_query.where(Report.project_id == project_id)
+    if module_id:
+        base_query = base_query.where(Report.module_id == module_id)
+    if search:
+        base_query = base_query.where(
+            or_(
+                Scenario.name.ilike(f"%{search}%"),
+                Scenario.error_message.ilike(f"%{search}%")
+            )
+        )
+
+    # Get total count
+    count_query = select(func.count()).select_from(base_query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
+
+    # Apply pagination and ordering (most recent failures first)
+    offset = (page - 1) * size
+    base_query = base_query.order_by(Scenario.created_at.desc()).offset(offset).limit(size)
+
+    result = await db.execute(base_query)
+    rows = result.all()
+
+    scenarios = [
+        FailedScenarioResponse(
+            id=scenario.id,
+            name=scenario.name,
+            status=scenario.status,
+            duration=scenario.duration,
+            error_message=scenario.error_message,
+            stack_trace=scenario.stack_trace,
+            tags=[t.strip() for t in scenario.tags.split(",") if t.strip()] if scenario.tags else [],
+            feature=scenario.feature,
+            created_at=scenario.created_at,
+            project_id=project.id,
+            project_name=project.name,
+            module_id=module.id,
+            module_name=module.name,
+        )
+        for scenario, report, module, project in rows
+    ]
+
+    pages = (total + size - 1) // size if total else 0
+
+    return FailedScenarioListResponse(
+        scenarios=scenarios,
         total=total,
         page=page,
         size=size,

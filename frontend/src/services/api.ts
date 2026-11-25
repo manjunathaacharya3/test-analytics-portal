@@ -79,6 +79,32 @@ export interface TrendData {
   duration?: number;
 }
 
+// Real failed scenario data (no AI-generated fields - there is no AI/ML
+// backend producing confidence scores, root cause, similar failures, etc.)
+export interface FailedScenario {
+  id: string;
+  name: string;
+  status: string;
+  duration?: number;
+  error_message?: string;
+  stack_trace?: string;
+  tags: string[];
+  feature?: string;
+  created_at: string;
+  project_id: string;
+  project_name: string;
+  module_id: string;
+  module_name: string;
+}
+
+export interface FailedScenarioListResponse {
+  scenarios: FailedScenario[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
 export interface AnalyticsSummary {
   total_projects: number;
   total_executions: number;
@@ -253,6 +279,30 @@ export const apiService = {
     getById: async (id: number): Promise<Scenario> => {
       return apiFetch<Scenario>(`/scenarios/${id}`);
     },
+
+    /**
+     * Get failed scenarios, enriched with project/module context.
+     * Used by the AI Insights / Failure Analysis page.
+     */
+    getFailures: async (params?: {
+      project_id?: string;
+      module_id?: string;
+      search?: string;
+      page?: number;
+      size?: number;
+    }): Promise<FailedScenarioListResponse> => {
+      const query = new URLSearchParams();
+      if (params?.project_id) query.append('project_id', params.project_id);
+      if (params?.module_id) query.append('module_id', params.module_id);
+      if (params?.search) query.append('search', params.search);
+      if (params?.page) query.append('page', params.page.toString());
+      if (params?.size) query.append('size', params.size.toString());
+
+      const queryString = query.toString();
+      return apiFetch<FailedScenarioListResponse>(
+        `/scenarios/failures${queryString ? `?${queryString}` : ''}`
+      );
+    },
   },
 
   /**
@@ -360,6 +410,11 @@ export const apiService = {
 
     /**
      * Get trend data
+     *
+     * NOTE: The backend /analytics/trends endpoint returns a wrapper object
+     * shaped like { data_points: TrendData[], period: string }, NOT a bare
+     * array. We unwrap it here so callers can keep working with a simple
+     * TrendData[] as before.
      */
     getTrends: async (params: {
       project_id?: string;
@@ -368,8 +423,12 @@ export const apiService = {
       const query = new URLSearchParams();
       if (params.project_id) query.append('project_id', params.project_id);
       if (params.days) query.append('days', params.days.toString());
-      
-      return apiFetch<TrendData[]>(`/analytics/trends?${query.toString()}`);
+
+      const response = await apiFetch<{ data_points: TrendData[]; period: string }>(
+        `/analytics/trends?${query.toString()}`
+      );
+
+      return response?.data_points ?? [];
     },
   },
 

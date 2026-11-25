@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { executionsAPI, projectsAPI } from "@/lib/api";
 import type { Execution } from "@/lib/types";
+import { PageHeader, PageContainer } from "@/components/molecules";
 
 /**
  * Execution Summary Page
@@ -13,20 +14,58 @@ import type { Execution } from "@/lib/types";
  * - Page title with project name
  * - 3 summary cards (Pass Rate, Total Test Cases, Total Duration)
  * - Filter row with Date, Module, and Status dropdowns
- * - Execution table with module-wise test results
+ * - Execution table with module-wise test results (latest execution per module per day)
+ * - Actions column with View Module button
  * - Footer with last updated timestamp
  */
 
 // Interface for transformed execution data for UI
 interface ExecutionRowData {
   id: string;
+  moduleId: string;
   moduleName: string;
   passed: number;
   failed: number;
   total: number;
   duration: string;
   status: "pass" | "fail" | "warning";
+  createdAt: string;
 }
+
+// Format duration from seconds to readable format - moved outside component
+const formatDuration = (seconds: number | null): string => {
+  if (!seconds) return "0s";
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${secs}s`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${secs}s`;
+  }
+  return `${secs}s`;
+};
+
+// Format error message - handle arrays, objects, strings
+const formatErrorMessage = (error: any): string => {
+  if (!error) return "An unknown error occurred";
+  
+  if (typeof error === 'string') return error;
+  
+  if (Array.isArray(error)) {
+    return error.map(e => 
+      typeof e === 'object' ? e.msg || e.message || JSON.stringify(e) : String(e)
+    ).join(', ');
+  }
+  
+  if (typeof error === 'object') {
+    return error.message || error.msg || error.detail || JSON.stringify(error);
+  }
+  
+  return String(error);
+};
 
 export default function ExecutionSummaryPage() {
   const router = useRouter();
@@ -56,9 +95,6 @@ export default function ExecutionSummaryPage() {
         const projectsList = await projectsAPI.getProjects();
         console.log("Projects fetched:", projectsList);
         setProjects(projectsList);
-        
-        // If no project in URL, don't auto-select
-        // User must choose from dropdown
       } catch (err: any) {
         console.error("Error fetching projects:", err);
       } finally {
@@ -105,16 +141,19 @@ export default function ExecutionSummaryPage() {
         setError(null);
         console.log("Fetching executions for project:", projectId);
         
+        // Backend has a max page size of 100, so fetch in batches if needed
         const response = await executionsAPI.getProjectExecutions(projectId, {
           page: 1,
-          size: 100,
+          size: 100, // Max allowed by backend validation
         });
         
         console.log("Executions API response:", response);
         setExecutions(response.executions || []);
       } catch (err: any) {
         console.error("Error fetching executions:", err);
-        setError(err.detail || "Failed to load execution data");
+        // Format error properly - handle arrays, objects, strings
+        const errorMessage = formatErrorMessage(err.detail || err);
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -134,25 +173,34 @@ export default function ExecutionSummaryPage() {
     }
   };
 
-  // Format duration from seconds to readable format
-  const formatDuration = (seconds: number | null): string => {
-    if (!seconds) return "0s";
-    
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${secs}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`;
-    }
-    return `${secs}s`;
+  // Navigate to module details page
+  const handleViewModule = (moduleId: string, moduleName: string) => {
+    router.push(`/module-details?project=${projectId}&projectName=${encodeURIComponent(projectName)}&module=${moduleId}&moduleName=${encodeURIComponent(moduleName)}`);
   };
 
-  // Calculate summary data from executions
+  // Get latest execution per module per day
+  const latestExecutionsPerModulePerDay = React.useMemo(() => {
+    // Group executions by date and module
+    const grouped = new Map<string, Execution>();
+
+    executions.forEach((exec) => {
+      const executionDate = new Date(exec.created_at).toISOString().split('T')[0];
+      const key = `${executionDate}_${exec.module_id}`;
+      
+      const existing = grouped.get(key);
+      if (!existing || new Date(exec.created_at) > new Date(existing.created_at)) {
+        grouped.set(key, exec);
+      }
+    });
+
+    return Array.from(grouped.values());
+  }, [executions]);
+
+  console.log("Latest executions per module per day:", latestExecutionsPerModulePerDay);
+
+  // Calculate summary data from latest executions only
   const summaryData = React.useMemo(() => {
-    if (executions.length === 0) {
+    if (latestExecutionsPerModulePerDay.length === 0) {
       return {
         passRate: "0%",
         totalTests: "0",
@@ -160,9 +208,9 @@ export default function ExecutionSummaryPage() {
       };
     }
 
-    const totalTests = executions.reduce((sum, exec) => sum + exec.total_scenarios, 0);
-    const totalPassed = executions.reduce((sum, exec) => sum + exec.passed_scenarios, 0);
-    const totalDuration = executions.reduce((sum, exec) => sum + (exec.duration || 0), 0);
+    const totalTests = latestExecutionsPerModulePerDay.reduce((sum, exec) => sum + exec.total_scenarios, 0);
+    const totalPassed = latestExecutionsPerModulePerDay.reduce((sum, exec) => sum + exec.passed_scenarios, 0);
+    const totalDuration = latestExecutionsPerModulePerDay.reduce((sum, exec) => sum + (exec.duration || 0), 0);
     const passRate = totalTests > 0 ? ((totalPassed / totalTests) * 100).toFixed(1) : "0";
 
     console.log("Summary calculations:", { totalTests, totalPassed, totalDuration, passRate });
@@ -172,30 +220,30 @@ export default function ExecutionSummaryPage() {
       totalTests: totalTests.toLocaleString(),
       totalDuration: formatDuration(totalDuration),
     };
-  }, [executions]);
+  }, [latestExecutionsPerModulePerDay]);
 
   // Get latest execution date for preselection
   const latestExecutionDate = React.useMemo(() => {
-    if (executions.length === 0) return "";
+    if (latestExecutionsPerModulePerDay.length === 0) return "";
     
-    const sortedExecutions = [...executions].sort((a, b) => 
+    const sortedExecutions = [...latestExecutionsPerModulePerDay].sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     
     const latestDate = new Date(sortedExecutions[0].created_at);
     return latestDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
-  }, [executions]);
+  }, [latestExecutionsPerModulePerDay]);
 
   // Auto-select latest execution date when executions load
   React.useEffect(() => {
     if (latestExecutionDate && !dateFilter) {
       setDateFilter(latestExecutionDate);
     }
-  }, [latestExecutionDate]);
+  }, [latestExecutionDate, dateFilter]);
 
-  // Transform executions to row data format
+  // Transform executions to row data format (using latest executions only)
   const executionData: ExecutionRowData[] = React.useMemo(() => {
-    return executions.map((exec) => {
+    return latestExecutionsPerModulePerDay.map((exec) => {
       const total = exec.total_scenarios;
       const passed = exec.passed_scenarios;
       const failed = exec.failed_scenarios;
@@ -212,15 +260,17 @@ export default function ExecutionSummaryPage() {
 
       return {
         id: exec.id,
+        moduleId: exec.module_id,
         moduleName: exec.module_name || "Unknown Module",
         passed,
         failed,
         total,
         duration: formatDuration(exec.duration),
         status,
+        createdAt: exec.created_at,
       };
     });
-  }, [executions]);
+  }, [latestExecutionsPerModulePerDay]);
 
   console.log("Transformed execution data:", executionData);
 
@@ -232,20 +282,17 @@ export default function ExecutionSummaryPage() {
         return false;
       }
       
-      // Date filter - filter by execution created_at date
+      // Date filter
       if (dateFilter) {
-        const execution = executions.find(e => e.id === row.id);
-        if (execution) {
-          const executionDate = new Date(execution.created_at).toISOString().split('T')[0];
-          if (executionDate !== dateFilter) {
-            return false;
-          }
+        const executionDate = new Date(row.createdAt).toISOString().split('T')[0];
+        if (executionDate !== dateFilter) {
+          return false;
         }
       }
       
       return true;
     });
-  }, [executionData, executions, dateFilter, statusFilter]);
+  }, [executionData, dateFilter, statusFilter]);
 
   // Get current timestamp
   const lastUpdated = new Date().toLocaleString("en-US", {
@@ -255,11 +302,6 @@ export default function ExecutionSummaryPage() {
     hour: "2-digit",
     minute: "2-digit",
   });
-
-  // Handle back button click
-  const handleBackClick = () => {
-    router.push("/projects");
-  };
 
   // Get status icon
   const getStatusIcon = (status: string) => {
@@ -290,43 +332,12 @@ export default function ExecutionSummaryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <PageContainer>
       <div className="flex h-full flex-col">
         {/* Header with Title and Back Button */}
-        <div className="mb-6 flex items-center justify-between">
-          <h1
-            style={{
-              color: "#1b4332",
-              fontWeight: "bold",
-              fontSize: "24px",
-              margin: 0,
-            }}
-          >
-            Execution Summary{projectName !== "Project" ? `: ${projectName}` : ""}
-          </h1>
-          <button
-            onClick={handleBackClick}
-            style={{
-              background: "#374151",
-              borderRadius: "6px",
-              padding: "5px 10px",
-              fontSize: "12px",
-              fontWeight: 500,
-              color: "white",
-              border: "none",
-              cursor: "pointer",
-              transition: "background 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#111827";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#374151";
-            }}
-          >
-            ← Back to Projects
-          </button>
-        </div>
+        <PageHeader
+          title={`Execution Summary${projectName !== "Project" ? `: ${projectName}` : ""}`}
+        />
 
         {/* Project Dropdown - Always visible */}
         <div className="mb-6">
@@ -367,6 +378,26 @@ export default function ExecutionSummaryPage() {
             ))}
           </select>
         </div>
+
+        {/* Latest Execution Indicator */}
+        {projectId && !loading && latestExecutionsPerModulePerDay.length > 0 && (
+          <div style={{
+            background: "#eff6ff",
+            border: "1px solid #bfdbfe",
+            borderRadius: "6px",
+            padding: "10px 14px",
+            marginBottom: "16px",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            maxWidth: "fit-content",
+          }}>
+            <i className="fas fa-info-circle" style={{ color: "#3b82f6", fontSize: "14px" }} />
+            <span style={{ fontSize: "13px", color: "#1e40af", fontWeight: 500 }}>
+              Showing latest execution per module per day
+            </span>
+          </div>
+        )}
 
         {/* Summary Cards */}
         <div
@@ -438,7 +469,7 @@ export default function ExecutionSummaryPage() {
               </div>
             </div>
             <i
-              className="fas fa-flask"
+              className="fas fa-vials"
               style={{ fontSize: "18px", color: "#17a2b8" }}
             ></i>
           </div>
@@ -460,7 +491,7 @@ export default function ExecutionSummaryPage() {
                 style={{
                   fontSize: "22px",
                   fontWeight: "bold",
-                  color: "#10b981",
+                  color: "#fd7e14",
                   marginBottom: "4px",
                 }}
               >
@@ -471,16 +502,17 @@ export default function ExecutionSummaryPage() {
               </div>
             </div>
             <i
-              className="fas fa-clock"
-              style={{ fontSize: "18px", color: "#6f42c1" }}
+              className="fas fa-stopwatch"
+              style={{ fontSize: "18px", color: "#fd7e14" }}
             ></i>
           </div>
         </div>
 
-        {/* Filter Row */}
+        {/* Filter Row - Date and Status */}
         <div
           style={{
-            background: "#f1f5f9",
+            background: "white",
+            border: "1px solid #e5e7eb",
             padding: "12px",
             borderRadius: "8px",
             marginBottom: "18px",
@@ -638,7 +670,7 @@ export default function ExecutionSummaryPage() {
                     fontSize: "16px",
                     fontWeight: "bold",
                     color: "#dc3545",
-                    marginBottom: "5px",
+                    marginBottom: "4px",
                   }}
                 >
                   Error Loading Data
@@ -652,7 +684,7 @@ export default function ExecutionSummaryPage() {
         )}
 
         {/* Empty State - No Executions */}
-        {projectId && !loading && !error && executionData.length === 0 && (
+        {projectId && !loading && !error && filteredExecutionData.length === 0 && (
           <div
             style={{
               background: "white",
@@ -680,16 +712,18 @@ export default function ExecutionSummaryPage() {
                 marginBottom: "10px",
               }}
             >
-              No Executions Found
+              No Execution Data Found
             </div>
             <div style={{ fontSize: "14px", color: "#6c757d" }}>
-              There are no test executions for this project yet.
+              {dateFilter || statusFilter
+                ? "Try adjusting your filters to see more results."
+                : "No executions have been run for this project yet."}
             </div>
           </div>
         )}
 
         {/* Execution Table */}
-        {projectId && !loading && !error && executionData.length > 0 && (
+        {projectId && !loading && !error && filteredExecutionData.length > 0 && (
           <div
             style={{
               background: "white",
@@ -699,232 +733,190 @@ export default function ExecutionSummaryPage() {
               marginBottom: "20px",
             }}
           >
-            {filteredExecutionData.length === 0 ? (
-              <div
-                style={{
-                  padding: "60px 20px",
-                  textAlign: "center",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "48px",
-                    color: "#6c757d",
-                    marginBottom: "20px",
-                  }}
-                >
-                  <i className="fas fa-filter"></i>
-                </div>
-                <div
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: "bold",
-                    color: "#374151",
-                    marginBottom: "10px",
-                  }}
-                >
-                  No Results Found
-                </div>
-                <div style={{ fontSize: "14px", color: "#6c757d" }}>
-                  No executions match the selected filters. Try adjusting your filter criteria.
-                </div>
-              </div>
-            ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  {/* Table Header */}
-                  <thead>
-                    <tr
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#1e293b" }}>
+                    <th
                       style={{
-                        background: "#1e293b",
+                        padding: "10px 12px",
+                        textAlign: "left",
                         color: "white",
+                        fontSize: "12px",
+                        fontWeight: "bold",
                       }}
                     >
-                      <th
-                        style={{
-                          padding: "8px 12px",
-                          textAlign: "center",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                        }}
-                      >
-                        Module Name
-                      </th>
-                      <th
-                        style={{
-                          padding: "8px 12px",
-                          textAlign: "center",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                        }}
-                      >
-                        Passed
-                      </th>
-                      <th
-                        style={{
-                          padding: "8px 12px",
-                          textAlign: "center",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                        }}
-                      >
-                        Failed
-                      </th>
-                      <th
-                        style={{
-                          padding: "8px 12px",
-                          textAlign: "center",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                        }}
-                      >
-                        Total
-                      </th>
-                      <th
-                        style={{
-                          padding: "8px 12px",
-                          textAlign: "center",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                        }}
-                      >
-                        Duration
-                      </th>
-                      <th
-                        style={{
-                          padding: "8px 12px",
-                          textAlign: "center",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                        }}
-                      >
-                        Status
-                      </th>
-                      <th
-                        style={{
-                          padding: "8px 12px",
-                          textAlign: "center",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                        }}
-                      >
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-
-                  {/* Table Body */}
-                  <tbody>
-                    {filteredExecutionData.map((row) => (
-                      <tr
-                        key={row.id}
-                        style={{
-                          background: getRowColor(row.status),
-                          transition: "background 0.2s ease",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "#e2e8f0";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = getRowColor(row.status);
-                        }}
-                      >
+                      Module
+                    </th>
+                    <th
+                      style={{
+                        padding: "10px 12px",
+                        textAlign: "center",
+                        color: "white",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Passed
+                    </th>
+                    <th
+                      style={{
+                        padding: "10px 12px",
+                        textAlign: "center",
+                        color: "white",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Failed
+                    </th>
+                    <th
+                      style={{
+                        padding: "10px 12px",
+                        textAlign: "center",
+                        color: "white",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Total
+                    </th>
+                    <th
+                      style={{
+                        padding: "10px 12px",
+                        textAlign: "center",
+                        color: "white",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Duration
+                    </th>
+                    <th
+                      style={{
+                        padding: "10px 12px",
+                        textAlign: "center",
+                        color: "white",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Status
+                    </th>
+                    <th
+                      style={{
+                        padding: "10px 12px",
+                        textAlign: "center",
+                        color: "white",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredExecutionData.map((row) => (
+                    <tr
+                      key={row.id}
+                      style={{
+                        backgroundColor: getRowColor(row.status),
+                        borderBottom: "1px solid #e5e7eb",
+                        transition: "background-color 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.opacity = "0.8";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = "1";
+                      }}
+                    >
                       <td
                         style={{
-                          padding: "8px 12px",
-                          textAlign: "center",
-                          fontWeight: "bold",
-                          fontSize: "12px",
+                          padding: "10px 12px",
+                          fontSize: "13px",
+                          fontWeight: 500,
+                          color: "#1f2937",
                         }}
                       >
                         {row.moduleName}
                       </td>
                       <td
                         style={{
-                          padding: "8px 12px",
+                          padding: "10px 12px",
                           textAlign: "center",
-                          fontSize: "12px",
+                          fontSize: "13px",
+                          fontWeight: "bold",
                           color: "#28a745",
-                          fontWeight: 500,
                         }}
                       >
                         {row.passed}
                       </td>
                       <td
                         style={{
-                          padding: "8px 12px",
+                          padding: "10px 12px",
                           textAlign: "center",
-                          fontSize: "12px",
+                          fontSize: "13px",
+                          fontWeight: "bold",
                           color: "#dc3545",
-                          fontWeight: 500,
                         }}
                       >
                         {row.failed}
                       </td>
                       <td
                         style={{
-                          padding: "8px 12px",
+                          padding: "10px 12px",
                           textAlign: "center",
-                          fontSize: "12px",
+                          fontSize: "13px",
+                          color: "#6c757d",
                         }}
                       >
                         {row.total}
                       </td>
                       <td
                         style={{
-                          padding: "8px 12px",
+                          padding: "10px 12px",
                           textAlign: "center",
-                          fontSize: "12px",
+                          fontSize: "13px",
+                          color: "#6c757d",
                         }}
                       >
                         {row.duration}
                       </td>
                       <td
                         style={{
-                          padding: "8px 12px",
+                          padding: "10px 12px",
                           textAlign: "center",
-                          fontSize: "14px",
+                          fontSize: "16px",
                         }}
                       >
                         {getStatusIcon(row.status)}
                       </td>
                       <td
                         style={{
-                          padding: "8px 12px",
+                          padding: "10px 12px",
                           textAlign: "center",
                         }}
                       >
                         <button
+                          onClick={() => handleViewModule(row.moduleId, row.moduleName)}
                           style={{
-                            background: "#0d6efd",
+                            padding: "4px 8px",
+                            fontSize: "11px",
+                            fontWeight: 500,
                             color: "white",
+                            background: "#495057",
                             border: "none",
                             borderRadius: "4px",
-                            padding: "5px 10px",
-                            fontSize: "11px",
                             cursor: "pointer",
                             transition: "background 0.2s ease",
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.background = "#0b5ed7";
+                            e.currentTarget.style.background = "#343a40";
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.background = "#0d6efd";
-                          }}
-                          onClick={() => {
-                            // Find the execution to get module_id
-                            const execution = executions.find(e => e.id === row.id);
-                            if (execution && execution.module_id) {
-                              console.log("View Module:", row.moduleName, "Module ID:", execution.module_id);
-                              // Navigate to module-details with project and module preselected
-                              router.push(
-                                `/module-details?project=${projectId}&module=${execution.module_id}`
-                              );
-                            } else {
-                              console.warn("Module ID not found for execution:", row.id);
-                              // Navigate without module preselection if module_id is missing
-                              router.push(`/module-details?project=${projectId}`);
-                            }
+                            e.currentTarget.style.background = "#495057";
                           }}
                         >
                           View Module
@@ -932,31 +924,26 @@ export default function ExecutionSummaryPage() {
                       </td>
                     </tr>
                   ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
-        {/* Footer */}
-        <div
-          style={{
-            textAlign: "center",
-            fontSize: "0.9rem",
-            color: "#6c757d",
-            marginTop: "20px",
-            paddingTop: "20px",
-            borderTop: "1px solid #e5e7eb",
-          }}
-        >
-          <i
-            className="fas fa-sync-alt"
-            style={{ marginRight: "8px" }}
-          ></i>
-          Last updated: {lastUpdated}
-        </div>
+        {/* Footer - Last Updated */}
+        {projectId && !loading && !error && filteredExecutionData.length > 0 && (
+          <div
+            style={{
+              padding: "12px",
+              textAlign: "center",
+              fontSize: "11px",
+              color: "#6c757d",
+            }}
+          >
+            Last updated: {lastUpdated}
+          </div>
+        )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

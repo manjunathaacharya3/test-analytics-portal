@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useCallback, type ReactNode } from 'react';
 import './sidebar-fixed.css';
 
 interface NavItem {
@@ -20,8 +20,51 @@ const navItems: NavItem[] = [
   { name: 'Settings', href: '/settings', icon: 'fa-gear' },
 ];
 
+/**
+ * Single shared building block for every hoverable icon in the sidebar
+ * (nav items AND the user avatar). All of them get identical markup
+ * (<button>), identical tooltip behavior (data-tooltip + .sidebar-action
+ * CSS), and only differ visually via modifier classes. This guarantees
+ * the tooltip can never drift out of sync between sections again.
+ */
+function SidebarIconButton({
+  tooltip,
+  variant,
+  isActive,
+  onClick,
+  children,
+}: {
+  tooltip: string;
+  variant: 'nav' | 'avatar';
+  isActive?: boolean;
+  onClick?: () => void;
+  children: ReactNode;
+}) {
+  const variantClass = variant === 'nav' ? 'sidebar-action--nav' : 'sidebar-action--avatar';
+  return (
+    <button
+      type="button"
+      className={`sidebar-action ${variantClass} ${isActive ? 'active' : ''}`}
+      data-tooltip={tooltip}
+      aria-label={tooltip}
+      aria-current={isActive ? 'page' : undefined}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const navigate = useCallback(
+    (href: string) => {
+      router.push(href);
+    },
+    [router]
+  );
 
   return (
     <div className="sidebar-fixed">
@@ -37,29 +80,24 @@ export function Sidebar() {
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
           return (
-            <Link
+            <SidebarIconButton
               key={item.href}
-              href={item.href}
-              className={`nav-item-fixed ${isActive ? 'active' : ''}`}
-              data-tooltip={item.name}
-              aria-label={item.name}
-              title={item.name}
+              tooltip={item.name}
+              variant="nav"
+              isActive={isActive}
+              onClick={() => navigate(item.href)}
             >
               <i className={`fas ${item.icon}`} />
-            </Link>
+            </SidebarIconButton>
           );
         })}
       </nav>
 
       {/* Footer Section */}
       <div className="sidebar-user">
-        <div 
-          className="user-avatar-fixed"
-          data-tooltip="Admin User"
-          aria-label="User profile"
-        >
+        <SidebarIconButton tooltip="Admin User" variant="avatar">
           <i className="fas fa-user-circle" />
-        </div>
+        </SidebarIconButton>
       </div>
     </div>
   );

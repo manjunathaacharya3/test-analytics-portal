@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
+import * as ReactDOM from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { projectsAPI, executionsAPI } from "@/lib/api";
+import { PageHeader, PageContainer } from "@/components/molecules";
 import type {
   ProjectOverview,
   Module,
@@ -21,6 +23,13 @@ interface DefectModalState {
   isOpen: boolean;
   scenarioId: string | null;
   scenarioName: string;
+}
+
+interface ViewDetailsModalState {
+  isOpen: boolean;
+  title: string;
+  content: string;
+  type: 'error' | 'stacktrace';
 }
 
 /**
@@ -57,6 +66,17 @@ export default function ModuleDetailsPage() {
   const [defectId, setDefectId] = React.useState<string>("");
   const [defectError, setDefectError] = React.useState<string>("");
   
+  // State for view details modal (error/stacktrace)
+  const [viewDetailsModal, setViewDetailsModal] = React.useState<ViewDetailsModalState>({
+    isOpen: false,
+    title: '',
+    content: '',
+    type: 'error',
+  });
+  
+  // State to track if component is mounted (for portal)
+  const [mounted, setMounted] = React.useState(false);
+  
   // API Data States
   const [projects, setProjects] = React.useState<ProjectOverview[]>([]);
   const [modules, setModules] = React.useState<Module[]>([]);
@@ -74,6 +94,11 @@ export default function ModuleDetailsPage() {
   const [modulesError, setModulesError] = React.useState<string>("");
   const [executionsError, setExecutionsError] = React.useState<string>("");
   const [scenariosError, setScenariosError] = React.useState<string>("");
+  
+  // Set mounted to true after component mounts (for portal)
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Fetch projects on mount
   React.useEffect(() => {
@@ -248,6 +273,16 @@ export default function ModuleDetailsPage() {
     setDefectError("");
   };
   
+  // Handle view details modal (error/stacktrace)
+  const handleViewDetails = (content: string, type: 'error' | 'stacktrace') => {
+    setViewDetailsModal({
+      isOpen: true,
+      title: type === 'error' ? 'Error Message' : 'Stack Trace',
+      content,
+      type,
+    });
+  };
+  
   // Handle defect submission
   const handleDefectSubmit = () => {
     if (!defectId.trim()) {
@@ -280,8 +315,6 @@ export default function ModuleDetailsPage() {
     return isoString.replace('T', ' ').split('.')[0];
   };
   
-  // Note: getStatusColor removed as it was unused
-  
   const getStatusBgColor = (status: ExecutionStatus | ScenarioStatus) => {
     switch (status) {
       case "passed":
@@ -293,37 +326,201 @@ export default function ModuleDetailsPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="flex h-full flex-col">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Module Details
-          </h1>
-          <button
-            onClick={() => router.push('/projects')}
+  // Defect modal component to render in portal
+  const renderDefectModal = () => {
+    if (!defectModal.isOpen || !mounted) return null;
+    
+    return ReactDOM.createPortal(
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999999,
+        }}
+        onClick={() => {
+          setDefectModal({ isOpen: false, scenarioId: null, scenarioName: "" });
+          setDefectId("");
+          setDefectError("");
+        }}
+      >
+        <div 
+          style={{
+            width: '100%',
+            maxWidth: '28rem',
+            backgroundColor: 'white',
+            borderRadius: '0.5rem',
+            padding: '1.5rem',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h3 style={{ marginBottom: '1rem', fontSize: '1.125rem', fontWeight: 600, color: '#111827' }}>
+            Link Defect
+          </h3>
+          <p style={{ marginBottom: '1rem', fontSize: '0.875rem', color: '#4b5563' }}>
+            Scenario: {defectModal.scenarioName}
+          </p>
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ marginBottom: '0.5rem', display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>
+              Defect ID
+            </label>
+            <input
+              type="text"
+              value={defectId}
+              onChange={(e) => {
+                setDefectId(e.target.value);
+                setDefectError("");
+              }}
+              placeholder="Enter Defect ID..."
+              style={{
+                width: '100%',
+                borderRadius: '0.5rem',
+                border: '1px solid #d1d5db',
+                backgroundColor: 'white',
+                padding: '0.5rem 0.75rem',
+                fontSize: '0.875rem',
+                outline: 'none',
+              }}
+            />
+            {defectError && (
+              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#dc2626' }}>
+                {defectError}
+              </p>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button
+              variant="default"
+              onClick={handleDefectSubmit}
+              style={{ flex: 1 }}
+            >
+              OK
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setDefectModal({ isOpen: false, scenarioId: null, scenarioName: "" });
+                setDefectId("");
+                setDefectError("");
+              }}
+              style={{ flex: 1 }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
+  // View details modal component to render in portal
+  const renderViewDetailsModal = () => {
+    if (!viewDetailsModal.isOpen || !mounted) return null;
+    
+    return ReactDOM.createPortal(
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999999,
+        }}
+        onClick={() => setViewDetailsModal({ isOpen: false, title: '', content: '', type: 'error' })}
+      >
+        <div 
+          style={{
+            width: '100%',
+            maxWidth: '48rem',
+            maxHeight: '80vh',
+            backgroundColor: 'white',
+            borderRadius: '0.5rem',
+            padding: '1.5rem',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#111827', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <i 
+                className={viewDetailsModal.type === 'error' ? 'fas fa-exclamation-circle' : 'fas fa-code'} 
+                style={{ color: viewDetailsModal.type === 'error' ? '#dc2626' : '#6b7280', fontSize: '20px' }}
+              />
+              {viewDetailsModal.title}
+            </h3>
+            <button
+              onClick={() => setViewDetailsModal({ isOpen: false, title: '', content: '', type: 'error' })}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                fontSize: '24px',
+                cursor: 'pointer',
+                padding: '4px',
+                lineHeight: 1,
+                color: '#6b7280',
+              }}
+            >
+              ×
+            </button>
+          </div>
+          
+          <div 
             style={{
-              background: "#374151",
-              borderRadius: "6px",
-              padding: "5px 10px",
-              fontSize: "12px",
-              fontWeight: 500,
-              color: "white",
-              border: "none",
-              cursor: "pointer",
-              transition: "background 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#111827";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#374151";
+              flex: 1,
+              overflowY: 'auto',
+              backgroundColor: '#f9fafb',
+              borderRadius: '0.375rem',
+              padding: '1rem',
+              border: '1px solid #e5e7eb',
             }}
           >
-            ← Back to Projects
-          </button>
+            <pre style={{ 
+              margin: 0, 
+              whiteSpace: 'pre-wrap', 
+              wordBreak: 'break-word', 
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+              fontSize: '0.875rem',
+              lineHeight: '1.5',
+              color: '#111827',
+            }}>
+              {viewDetailsModal.content}
+            </pre>
+          </div>
+
+          <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              variant="default"
+              onClick={() => setViewDetailsModal({ isOpen: false, title: '', content: '', type: 'error' })}
+            >
+              Close
+            </Button>
+          </div>
         </div>
+      </div>,
+      document.body
+    );
+  };
+
+  return (
+    <PageContainer>
+      <div className="flex h-full flex-col">
+        {/* Header */}
+        <PageHeader title="Module Details" />
 
         {/* Cascading Dropdowns */}
         <div className="mb-6">
@@ -620,10 +817,10 @@ export default function ModuleDetailsPage() {
                       <th className="px-3 py-2 text-left text-xs font-semibold text-white">
                         Feature
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-white">
+                      <th className="px-3 py-2 text-center text-xs font-semibold text-white">
                         Error
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-white">
+                      <th className="px-3 py-2 text-center text-xs font-semibold text-white">
                         Stack Trace
                       </th>
                       <th className="px-3 py-2 text-left text-xs font-semibold text-white">
@@ -659,28 +856,70 @@ export default function ModuleDetailsPage() {
                         <td className="px-3 py-2 text-xs text-muted-foreground">
                           {scenario.feature || "-"}
                         </td>
-                        <td className="px-3 py-2 text-xs text-red-600">
-                          {scenario.error_message || "-"}
-                        </td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">
-                          {scenario.stack_trace ? (
-                            <div className="max-w-xs truncate" title={scenario.stack_trace}>
-                              {scenario.stack_trace}
-                            </div>
+                        <td className="px-3 py-2 text-center text-xs">
+                          {scenario.error_message ? (
+                            <button
+                              onClick={() => handleViewDetails(scenario.error_message!, 'error')}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '4px',
+                              }}
+                            >
+                              <i 
+                                className="fas fa-eye cursor-pointer text-red-600 hover:text-red-700" 
+                                style={{ fontSize: '14px' }}
+                              />
+                            </button>
                           ) : (
-                            "-"
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-center text-xs">
+                          {scenario.stack_trace ? (
+                            <button
+                              onClick={() => handleViewDetails(scenario.stack_trace!, 'stacktrace')}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '4px',
+                              }}
+                            >
+                              <i 
+                                className="fas fa-eye cursor-pointer text-gray-600 hover:text-gray-700" 
+                                style={{ fontSize: '14px' }}
+                              />
+                            </button>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
                           )}
                         </td>
                         <td className="px-3 py-2 text-xs">
                           {scenario.status === "failed" ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
+                            <button
                               onClick={() => handleLinkDefect(scenario.id, scenario.name)}
-                              style={{ fontSize: '11px', padding: '4px 8px' }}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                color: 'white',
+                                background: '#495057',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#343a40';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#495057';
+                              }}
                             >
                               Link Defect
-                            </Button>
+                            </button>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
@@ -693,61 +932,12 @@ export default function ModuleDetailsPage() {
             </div>
           </div>
         )}
-
-        {/* Defect Modal */}
-        {defectModal.isOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-xl">
-              <h3 className="mb-4 text-lg font-semibold text-foreground">
-                Link Defect
-              </h3>
-              <p className="mb-4 text-sm text-muted-foreground">
-                Scenario: {defectModal.scenarioName}
-              </p>
-              <div className="mb-4">
-                <label className="mb-2 block text-sm font-medium text-foreground">
-                  Defect ID
-                </label>
-                <input
-                  type="text"
-                  value={defectId}
-                  onChange={(e) => {
-                    setDefectId(e.target.value);
-                    setDefectError("");
-                  }}
-                  placeholder="Enter Defect ID..."
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-                {defectError && (
-                  <p className="mt-2 text-sm text-red-600">
-                    {defectError}
-                  </p>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="default"
-                  onClick={handleDefectSubmit}
-                  className="flex-1"
-                >
-                  OK
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setDefectModal({ isOpen: false, scenarioId: null, scenarioName: "" });
-                    setDefectId("");
-                    setDefectError("");
-                  }}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        
+        {/* Render modals via portal */}
+        {renderDefectModal()}
+        {renderViewDetailsModal()}
       </div>
-    </div>
+    </PageContainer>
   );
 }
+

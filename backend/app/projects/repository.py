@@ -2,7 +2,7 @@
 from typing import Optional, List
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -74,6 +74,9 @@ class ProjectRepository:
         This method fixes the N+1 query problem by using a single optimized query
         with JOINs and aggregations instead of 301 queries for 100 projects.
         
+        IMPORTANT: Counts UNIQUE scenarios by name, not total execution counts.
+        If a module has 4 scenarios and is executed twice, it shows 4, not 8.
+        
         Args:
             page: Page number (1-indexed)
             size: Number of items per page
@@ -83,7 +86,7 @@ class ProjectRepository:
         Returns:
             List of dictionaries containing project data and metrics
         """
-        from app.modules.reports.models import Report  # Import here to avoid circular dependency
+        from app.modules.reports.models import Report, Scenario  # Import here to avoid circular dependency
         
         # Create a subquery to count modules per project
         # This counts all modules regardless of whether they have reports
@@ -95,21 +98,53 @@ class ProjectRepository:
             .group_by(Module.project_id)
         ).subquery()
         
+        # Subquery to get the latest report per module (for status determination)
+        latest_report_subquery = (
+            select(
+                Report.module_id,
+                func.max(Report.created_at).label("latest_created_at")
+            )
+            .group_by(Report.module_id)
+        ).subquery()
+        
         # Single optimized query with JOINs and aggregations
         # This replaces N+1 queries with a single query using database-level aggregations
-        # Use the subquery for module counts and join reports through modules
+        # COUNT DISTINCT scenarios by name to avoid counting duplicates across executions
         stmt = (
             select(
                 Project,
                 func.coalesce(modules_subquery.c.module_count, 0).label("modules_count"),
-                func.coalesce(func.sum(Report.total_scenarios), 0).label("total_tests"),
-                func.coalesce(func.sum(Report.passed_scenarios), 0).label("passed_tests"),
-                func.coalesce(func.sum(Report.failed_scenarios), 0).label("failed_tests"),
+                # Count unique scenarios by name (not SUM of execution counts)
+                func.count(func.distinct(Scenario.name)).label("total_tests"),
+                # Count scenarios with status='passed' from latest execution
+                func.sum(
+                    case(
+                        (
+                            (Scenario.status == 'passed') & 
+                            (Report.created_at == latest_report_subquery.c.latest_created_at),
+                            1
+                        ),
+                        else_=0
+                    )
+                ).label("passed_tests"),
+                # Count scenarios with status='failed' from latest execution
+                func.sum(
+                    case(
+                        (
+                            (Scenario.status == 'failed') & 
+                            (Report.created_at == latest_report_subquery.c.latest_created_at),
+                            1
+                        ),
+                        else_=0
+                    )
+                ).label("failed_tests"),
                 func.max(Report.created_at).label("last_run"),
             )
             .outerjoin(modules_subquery, modules_subquery.c.project_id == Project.id)
             .outerjoin(Module, Module.project_id == Project.id)
             .outerjoin(Report, Report.module_id == Module.id)
+            .outerjoin(latest_report_subquery, latest_report_subquery.c.module_id == Module.id)
+            .outerjoin(Scenario, Scenario.report_id == Report.id)
         )
         
         # Apply filters
@@ -143,7 +178,7 @@ class ProjectRepository:
             
             pass_rate = (passed_tests / total_tests * 100) if total_tests > 0 else 0.0
             
-            # Determine status based on test results
+            # Determine status based on test results from latest execution
             if total_tests == 0:
                 last_status = None
             elif failed_tests == 0:

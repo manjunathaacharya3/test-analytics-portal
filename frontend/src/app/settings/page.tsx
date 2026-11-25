@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiService, ApiError, Project, Module } from '@/services/api';
+import { PageHeader, PageContainer } from '@/components/molecules';
 
 type TabType = 'projects' | 'modules';
 
@@ -46,6 +47,19 @@ const SettingsPage: React.FC = () => {
     text: string;
   } | null>(null);
 
+  // Copy-to-clipboard feedback state (used for Project/Module UUIDs)
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyId = async (id: string) => {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      console.error('[Settings] Failed to copy ID to clipboard:', error);
+    }
+  };
+
   // Load project data in edit mode
   useEffect(() => {
     const loadProject = async () => {
@@ -83,25 +97,24 @@ const SettingsPage: React.FC = () => {
     loadProject();
   }, [isEditMode, projectId]);
 
-  // Load all projects for module management tab
+  // Load all projects - used by both the Project Management list and the
+  // Module Management project dropdown, so it must not be gated to one tab.
   useEffect(() => {
     const loadProjects = async () => {
-      if (activeTab === 'modules') {
-        setIsLoadingProjects(true);
-        console.log('[Settings] Loading all projects for module management');
-        
-        try {
-          const projectsList = await apiService.projects.getAll();
-          console.log('[Settings] Projects loaded:', projectsList);
-          setProjects(projectsList || []);
-        } catch (error) {
-          console.error('[Settings] Error loading projects:', error);
-        } finally {
-          setIsLoadingProjects(false);
-        }
+      setIsLoadingProjects(true);
+      console.log('[Settings] Loading all projects');
+
+      try {
+        const projectsList = await apiService.projects.getAll();
+        console.log('[Settings] Projects loaded:', projectsList);
+        setProjects(projectsList || []);
+      } catch (error) {
+        console.error('[Settings] Error loading projects:', error);
+      } finally {
+        setIsLoadingProjects(false);
       }
     };
-    
+
     loadProjects();
   }, [activeTab]);
 
@@ -253,11 +266,6 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  // Handle back button
-  const handleBack = () => {
-    router.push('/projects');
-  };
-
   // Module management handlers
   const handleAddModule = async () => {
     if (!newModule.name.trim()) {
@@ -366,48 +374,9 @@ const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen" style={{
-      backgroundColor: '#f8fafc',
-      padding: '18px'
-    }}>
+    <PageContainer>
       {/* Page Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '15px'
-      }}>
-        <h1 style={{
-          color: '#1e293b',
-          fontWeight: 600,
-          fontSize: '20px',
-          marginBottom: 0
-        }}>
-          Settings
-        </h1>
-        <button
-          onClick={handleBack}
-          style={{
-            backgroundColor: '#374151',
-            color: '#ffffff',
-            fontWeight: 500,
-            padding: '5px 10px',
-            fontSize: '12px',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            transition: 'background 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#111827';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#374151';
-          }}
-        >
-          ← Back to Projects
-        </button>
-      </div>
+      <PageHeader title="Settings" />
 
       {/* Tab Navigation */}
       <div style={{
@@ -862,6 +831,155 @@ const SettingsPage: React.FC = () => {
               </form>
             </div>
           </div>
+
+          {/* Existing Projects List - shows Project UUID for API/reference use */}
+          <div
+            style={{
+              border: '1px solid #e2e8f0',
+              borderRadius: '6px',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              background: '#ffffff',
+              marginTop: '12px',
+              animation: 'fadeInUp 0.6s ease-out'
+            }}
+          >
+            {/* Card Header */}
+            <div style={{
+              backgroundColor: '#f8fafc',
+              borderBottom: '1px solid #e2e8f0',
+              padding: '10px 14px',
+              borderRadius: '6px 6px 0 0'
+            }}>
+              <h4 style={{
+                color: '#374151',
+                fontWeight: 600,
+                fontSize: '13px',
+                marginBottom: 0
+              }}>
+                Existing Projects
+              </h4>
+            </div>
+
+            {/* Card Body */}
+            <div style={{ padding: '14px' }}>
+              {isLoadingProjects ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '20px',
+                  color: '#64748b',
+                  fontSize: '11px'
+                }}>
+                  <i className="fas fa-spinner fa-spin" style={{ marginRight: '6px' }} />
+                  Loading projects...
+                </div>
+              ) : projects.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '20px',
+                  color: '#94a3b8',
+                  fontSize: '11px'
+                }}>
+                  No projects created yet. Use the form above to create your first project.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {projects.map((project) => (
+                    <div
+                      key={project.id}
+                      style={{
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        padding: '10px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '10px',
+                        backgroundColor: project.id === projectId ? '#f0f9ff' : '#ffffff'
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          color: '#1e293b',
+                          fontWeight: 600,
+                          fontSize: '12px',
+                          marginBottom: '4px'
+                        }}>
+                          {project.name}
+                          <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: '8px', fontSize: '10px' }}>
+                            Owner: {project.owner}
+                          </span>
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '10px',
+                          color: '#64748b'
+                        }}>
+                          <span style={{ fontWeight: 500 }}>ID:</span>
+                          <code
+                            style={{
+                              backgroundColor: '#f1f5f9',
+                              padding: '2px 6px',
+                              borderRadius: '3px',
+                              fontFamily: 'monospace',
+                              color: '#475569',
+                              wordBreak: 'break-all'
+                            }}
+                          >
+                            {project.id}
+                          </code>
+                          <button
+                            onClick={() => handleCopyId(project.id)}
+                            title="Copy Project ID"
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: copiedId === project.id ? '#059669' : '#6366f1',
+                              fontSize: '10px',
+                              padding: '2px 4px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}
+                          >
+                            <i className={copiedId === project.id ? 'fas fa-check' : 'far fa-copy'} />
+                            {copiedId === project.id ? 'Copied' : 'Copy'}
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => router.push(`/settings?id=${project.id}`)}
+                        style={{
+                          backgroundColor: 'transparent',
+                          color: '#6366f1',
+                          fontWeight: 500,
+                          padding: '4px 10px',
+                          fontSize: '10px',
+                          border: '1px solid #6366f1',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#6366f1';
+                          e.currentTarget.style.color = '#ffffff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.color = '#6366f1';
+                        }}
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </>
       )}
 
@@ -1003,14 +1121,55 @@ const SettingsPage: React.FC = () => {
                 justifyContent: 'space-between',
                 alignItems: 'center'
               }}>
-                <h4 style={{
-                  color: '#374151',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  marginBottom: 0
-                }}>
-                  Modules for {projects.find(p => p.id === selectedProjectId)?.name}
-                </h4>
+                <div>
+                  <h4 style={{
+                    color: '#374151',
+                    fontWeight: 600,
+                    fontSize: '13px',
+                    marginBottom: '4px'
+                  }}>
+                    Modules for {projects.find(p => p.id === selectedProjectId)?.name}
+                  </h4>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '10px',
+                    color: '#64748b'
+                  }}>
+                    <span style={{ fontWeight: 500 }}>Project ID:</span>
+                    <code
+                      style={{
+                        backgroundColor: '#f1f5f9',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        fontFamily: 'monospace',
+                        color: '#475569',
+                        wordBreak: 'break-all'
+                      }}
+                    >
+                      {selectedProjectId}
+                    </code>
+                    <button
+                      onClick={() => handleCopyId(selectedProjectId)}
+                      title="Copy Project ID"
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: copiedId === selectedProjectId ? '#059669' : '#6366f1',
+                        fontSize: '10px',
+                        padding: '2px 4px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px'
+                      }}
+                    >
+                      <i className={copiedId === selectedProjectId ? 'fas fa-check' : 'far fa-copy'} />
+                      {copiedId === selectedProjectId ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
                 <button
                   onClick={() => {
                     setShowAddModule(!showAddModule);
@@ -1370,12 +1529,51 @@ const SettingsPage: React.FC = () => {
                                       <p style={{
                                         color: '#64748b',
                                         fontSize: '10px',
-                                        marginBottom: 0,
+                                        marginBottom: '6px',
                                         lineHeight: '1.4'
                                       }}>
                                         {module.description}
                                       </p>
                                     )}
+                                    <div style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '6px',
+                                      fontSize: '10px',
+                                      color: '#64748b'
+                                    }}>
+                                      <span style={{ fontWeight: 500 }}>ID:</span>
+                                      <code
+                                        style={{
+                                          backgroundColor: '#f1f5f9',
+                                          padding: '2px 6px',
+                                          borderRadius: '3px',
+                                          fontFamily: 'monospace',
+                                          color: '#475569',
+                                          wordBreak: 'break-all'
+                                        }}
+                                      >
+                                        {module.id}
+                                      </code>
+                                      <button
+                                        onClick={() => handleCopyId(module.id)}
+                                        title="Copy Module ID"
+                                        style={{
+                                          background: 'transparent',
+                                          border: 'none',
+                                          cursor: 'pointer',
+                                          color: copiedId === module.id ? '#059669' : '#6366f1',
+                                          fontSize: '10px',
+                                          padding: '2px 4px',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '3px'
+                                        }}
+                                      >
+                                        <i className={copiedId === module.id ? 'fas fa-check' : 'far fa-copy'} />
+                                        {copiedId === module.id ? 'Copied' : 'Copy'}
+                                      </button>
+                                    </div>
                                   </div>
                                   <div style={{ display: 'flex', gap: '6px', marginLeft: '12px' }}>
                                     <button
@@ -1443,7 +1641,7 @@ const SettingsPage: React.FC = () => {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 };
 

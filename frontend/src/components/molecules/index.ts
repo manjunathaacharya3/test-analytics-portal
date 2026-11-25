@@ -28,3 +28,9 @@ export { SearchBar } from "./SearchBar"
 export type { SearchBarProps } from "./SearchBar"
 
 export { ThemeToggle } from "./ThemeToggle"
+
+export { PageHeader } from "./PageHeader"
+export type { PageHeaderProps } from "./PageHeader"
+
+export { PageContainer } from "./PageContainer"
+export type { PageContainerProps } from "./PageContainer"

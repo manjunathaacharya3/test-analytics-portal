@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { apiService, type Project, type TrendData } from '@/services/api';
+import { PageHeader, PageContainer } from '@/components/molecules';
 
 interface ChartData {
   date: string;
@@ -12,7 +13,9 @@ interface ChartData {
 }
 
 export default function TrendsPage() {
-  const router = useRouter();
+  const searchParams = useSearchParams();
+  const projectIdFromUrl = searchParams.get('project');
+
   const [viewMode, setViewMode] = useState<'project' | 'module'>('project');
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [selectedModule, setSelectedModule] = useState<string>('');
@@ -35,6 +38,10 @@ export default function TrendsPage() {
         return 14;
       case 'Last 30 Days':
         return 30;
+      case 'Last 90 Days':
+        return 90;
+      case 'Last 365 Days':
+        return 365;
       default:
         return 14;
     }
@@ -70,8 +77,17 @@ export default function TrendsPage() {
         
         setProjects(projectsData);
         
-        // Set first project as default if available
-        if (projectsData.length > 0) {
+        // Prefer the project passed via the URL (e.g. navigated from the
+        // Projects page "Trends" button: /trends?project=<id>). Fall back
+        // to the first project only if the URL didn't specify one, or the
+        // specified project id doesn't match any known project.
+        const projectExistsInList = projectIdFromUrl
+          ? projectsData.some((p) => p.id === projectIdFromUrl)
+          : false;
+
+        if (projectIdFromUrl && projectExistsInList) {
+          setSelectedProject(projectIdFromUrl);
+        } else if (projectsData.length > 0) {
           setSelectedProject(projectsData[0].id);
         }
       } catch (err) {
@@ -81,7 +97,7 @@ export default function TrendsPage() {
     };
     
     fetchProjects();
-  }, []);
+  }, [projectIdFromUrl]);
 
   // Fetch trend data when filters change
   useEffect(() => {
@@ -182,41 +198,9 @@ export default function TrendsPage() {
   }
 
   return (
-    <div style={{ padding: '18px', background: 'var(--bg-primary)', minHeight: '100vh' }}>
+    <PageContainer>
       {/* Header */}
-      <div style={{ marginBottom: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        {/* Title */}
-        <h1
-          style={{
-            fontSize: '20px',
-            fontWeight: 700,
-            color: 'var(--text-primary)',
-            margin: 0,
-          }}
-        >
-          Quality Trends
-        </h1>
-        
-        {/* Back Button */}
-        <button
-          onClick={() => router.push('/projects')}
-          style={{
-            background: '#374151',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            padding: '5px 10px',
-            fontSize: '12px',
-            fontWeight: 500,
-            cursor: 'pointer',
-            transition: 'background 0.2s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = '#111827')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = '#374151')}
-        >
-          ← Back to Projects
-        </button>
-      </div>
+      <PageHeader title="Quality Trends" />
 
       {/* View Mode Toggle */}
       <div style={{ marginBottom: '15px' }}>
@@ -380,6 +364,8 @@ export default function TrendsPage() {
             <option value="Last 7 Days">Last 7 Days</option>
             <option value="Last 14 Days">Last 14 Days</option>
             <option value="Last 30 Days">Last 30 Days</option>
+            <option value="Last 90 Days">Last 90 Days</option>
+            <option value="Last 365 Days">Last 365 Days</option>
           </select>
         </div>
       </div>
@@ -555,6 +541,6 @@ export default function TrendsPage() {
           )}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }
